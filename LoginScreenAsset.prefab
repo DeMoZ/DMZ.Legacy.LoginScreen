@@ -42,7 +42,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8111270118515671482}
-  - component: {fileID: 5965809975427246841}
+  - component: {fileID: 4505973662381648487}
   m_Layer: 0
   m_Name: Bootstrap
   m_TagString: Untagged
@@ -65,7 +65,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7707108681191595684}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &5965809975427246841
+--- !u!114 &4505973662381648487
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -74,10 +74,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 7108770710869505252}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9db3e6b177b24340b2ccc53d930522ce, type: 3}
+  m_Script: {fileID: 11500000, guid: 765679cafce6b4d38ac50365d5ebbc50, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _logInUi: {fileID: 8999437772724108936}
+  _logInUi: {fileID: 978591595549502439}
 --- !u!1001 &6454561947656701272
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -86,6 +86,30 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7707108681191595684}
     m_Modifications:
+    - target: {fileID: 2994570758776588480, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
+      propertyPath: m_Name
+      value: NoneState
+      objectReference: {fileID: 0}
+    - target: {fileID: 3042073158407444187, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
+      propertyPath: m_Name
+      value: SwitchSingUpTgl
+      objectReference: {fileID: 0}
+    - target: {fileID: 3535370549535855969, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
+      propertyPath: m_Name
+      value: SwitchLogInTgl
+      objectReference: {fileID: 0}
+    - target: {fileID: 4270204506157791375, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
+      propertyPath: m_Name
+      value: StatusLbl
+      objectReference: {fileID: 0}
+    - target: {fileID: 5109968916383804778, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
+      propertyPath: m_Name
+      value: PasswordLbl
+      objectReference: {fileID: 0}
+    - target: {fileID: 5826114368271236484, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
+      propertyPath: m_Name
+      value: NameFld
+      objectReference: {fileID: 0}
     - target: {fileID: 6771107936005866172, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -166,9 +190,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7041498395235910964, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
+      propertyPath: m_Name
+      value: NameLbl
+      objectReference: {fileID: 0}
     - target: {fileID: 8442304979212424632, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
       propertyPath: m_Name
       value: LoginScreen
+      objectReference: {fileID: 0}
+    - target: {fileID: 8776234905993184874, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
+      propertyPath: m_Name
+      value: PasswordFld
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -180,14 +212,14 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 6771107936005866172, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
   m_PrefabInstance: {fileID: 6454561947656701272}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &8999437772724108936 stripped
+--- !u!114 &978591595549502439 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 2699724486540213200, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
+  m_CorrespondingSourceObject: {fileID: 6054969009718030015, guid: 76e4f6a39a2034ccc8e1c508ef8d6f6a, type: 3}
   m_PrefabInstance: {fileID: 6454561947656701272}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b3349f368efbd456ebc779c3c37770e7, type: 3}
+  m_Script: {fileID: 11500000, guid: 54dce446113154195a8a3b8c56d16a83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 

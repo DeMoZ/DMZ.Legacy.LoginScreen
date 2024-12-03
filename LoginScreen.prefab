@@ -1822,7 +1822,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7545060546596644946}
   m_Layer: 5
-  m_Name: None
+  m_Name: NoneState
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1980,7 +1980,7 @@ GameObject:
   - component: {fileID: 2405090500104788723}
   - component: {fileID: 4117282575770454465}
   m_Layer: 5
-  m_Name: SingUpTgl
+  m_Name: SwitchSingUpTgl
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2104,7 +2104,7 @@ GameObject:
   - component: {fileID: 5199471357606105448}
   - component: {fileID: 7568357401774897640}
   m_Layer: 5
-  m_Name: LogInTgl
+  m_Name: SwitchLogInTgl
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2541,7 +2541,7 @@ GameObject:
   - component: {fileID: 2521224258453110282}
   - component: {fileID: 4390047674426552106}
   m_Layer: 5
-  m_Name: CreateHintLbl
+  m_Name: StatusLbl
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2884,7 +2884,7 @@ GameObject:
   - component: {fileID: 1005729378721418787}
   - component: {fileID: 8205425533255106687}
   m_Layer: 5
-  m_Name: CreatePasswordLbl
+  m_Name: PasswordLbl
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3668,7 +3668,7 @@ GameObject:
   - component: {fileID: 1647427355550271607}
   - component: {fileID: 7505251925342856727}
   m_Layer: 5
-  m_Name: CreateNameFld
+  m_Name: NameFld
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4055,7 +4055,7 @@ GameObject:
   - component: {fileID: 1517929562706730966}
   - component: {fileID: 8755986393252906832}
   m_Layer: 5
-  m_Name: CreateNameLbl
+  m_Name: NameLbl
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4764,7 +4764,7 @@ GameObject:
   - component: {fileID: 4637844034717690165}
   - component: {fileID: 2765543054547281939}
   - component: {fileID: 6258236412413307315}
-  - component: {fileID: 2699724486540213200}
+  - component: {fileID: 6054969009718030015}
   m_Layer: 5
   m_Name: LoginScreen
   m_TagString: Untagged
@@ -4858,7 +4858,7 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!114 &2699724486540213200
+--- !u!114 &6054969009718030015
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -4867,7 +4867,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 8442304979212424632}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b3349f368efbd456ebc779c3c37770e7, type: 3}
+  m_Script: {fileID: 11500000, guid: 54dce446113154195a8a3b8c56d16a83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   _loginInfoTxt: {fileID: 2187379779424495590}
@@ -4891,7 +4891,7 @@ MonoBehaviour:
   _confirmContent: {fileID: 7605137014021206864}
   _notSureBtn: {fileID: 7120438144803400201}
   _sureBtn: {fileID: 2629661279005513881}
-  _validColor: {r: 0.4339623, g: 0.42372733, b: 0.42372733, a: 1}
+  _validColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   _invalidColor: {r: 1, g: 1, b: 1, a: 1}
   _validInputTextColor: {r: 0, g: 0, b: 0, a: 1}
   _invalidInputTextColor: {r: 1, g: 0, b: 0, a: 1}
@@ -5151,7 +5151,7 @@ GameObject:
   - component: {fileID: 1244704854294243800}
   - component: {fileID: 3742978426424237118}
   m_Layer: 5
-  m_Name: CreatePasswordFld
+  m_Name: PasswordFld
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

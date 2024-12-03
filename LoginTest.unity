@@ -291,6 +291,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 669261469028710620, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
+      propertyPath: m_Name
+      value: NameFld
+      objectReference: {fileID: 0}
     - target: {fileID: 2009456303138260191, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -310,11 +314,23 @@ PrefabInstance:
     - target: {fileID: 2009456303138260191, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2267971718948382770, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
+      propertyPath: m_Name
+      value: PasswordLbl
+      objectReference: {fileID: 0}
+    - target: {fileID: 2330690609486971698, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
+      propertyPath: m_Name
+      value: PasswordFld
       objectReference: {fileID: 0}
     - target: {fileID: 3433935386691309708, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
       propertyPath: m_Name
       value: LoginScreenAsset
       objectReference: {fileID: 0}
+    - target: {fileID: 4047426131661537388, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
+      propertyPath: m_Name
+      value: NameLbl
+      objectReference: {fileID: 0}
     - target: {fileID: 5492296295465432049, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -374,6 +390,14 @@ PrefabInstance:
     - target: {fileID: 6995152264313676330, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7120725079135780311, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
+      propertyPath: m_Name
+      value: StatusLbl
+      objectReference: {fileID: 0}
+    - target: {fileID: 7530895078263525433, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
+      propertyPath: m_Name
+      value: SwitchLogInTgl
       objectReference: {fileID: 0}
     - target: {fileID: 7707108681191595684, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
       propertyPath: m_LocalPosition.x
@@ -414,6 +438,14 @@ PrefabInstance:
     - target: {fileID: 7707108681191595684, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8078877026111606168, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
+      propertyPath: m_Name
+      value: NoneState
+      objectReference: {fileID: 0}
+    - target: {fileID: 8332970543841317763, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
+      propertyPath: m_Name
+      value: SwitchSingUpTgl
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
