@@ -295,6 +295,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: NameFld
       objectReference: {fileID: 0}
+    - target: {fileID: 1101848333935946987, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
+      propertyPath: m_BlockingMask.m_Bits
+      value: 55
+      objectReference: {fileID: 0}
     - target: {fileID: 2009456303138260191, guid: 9893246aeae654baca8f73d2a538e6b6, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
