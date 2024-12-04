@@ -1,19 +1,17 @@
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace DMZ.Legacy.LoginScreen
 {
     public class LoginBootstrap : MonoBehaviour
     {
-        [FormerlySerializedAs("logInUi")] [FormerlySerializedAs("loginUi")] [SerializeField] private LogInUi _logInUi;
+        [SerializeField] private LogInView logInView;
 
-        private LogInController _logInController;
-        private LogInModel _logInModel = new ();
-
-        private void Start()
+        private async void Start()
         {
-            _logInUi.Init(_logInModel);
-            _logInController = new LogInController(_logInModel);
+            var  logInModel = new LogInModel();
+            logInView.Init(logInModel);
+            var logInController = new LogInController(logInModel);
+            await logInController.TryRestoreCurrentSessionAsync();
         }
     }
 }

@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace DMZ.Legacy.LoginScreen
 {
-    public class LogInUi : MonoBehaviour
+    public class LogInView : MonoBehaviour
     {
         [Header("Developer information")]
         [SerializeField] private TMP_Text _loginInfoTxt;

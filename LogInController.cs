@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
@@ -17,15 +18,21 @@ namespace DMZ.Legacy.LoginScreen
         private bool _isRequestAwaited;
         private string _nameText;
         private string _passwordText;
+        private bool _isInitialized;
+
+        private CancellationTokenSource _cts = new();
 
         public LogInController(LogInModel model)
         {
             _model = model;
-            InitializeAsync();
+            InitializeUnityServiceAsync();
         }
 
         public void Dispose()
         {
+            _cts?.Cancel();
+            _cts?.Dispose();
+
             _model.OnSwitchSignUpClick -= OnSwitchSignUpClick;
             _model.OnSwitchLogInClick -= OnSwitchLogInClick;
             _model.OnLogInClick -= OnLogInClick;
@@ -41,34 +48,52 @@ namespace DMZ.Legacy.LoginScreen
             AuthenticationService.Instance.Expired -= OnExpired;
         }
 
-        private async void InitializeAsync()
+        private async void InitializeUnityServiceAsync()
         {
+            if (_isInitialized)
+            {
+                return;
+            }
+
+            _isRequestAwaited = true;
             _model.OnRequestAwait?.Invoke(false);
             _model.CurrentLoginViewState = LoginViewState.None;
 
             try
             {
                 await UnityServices.InitializeAsync();
+                _isInitialized = true;
+
+                _model.OnSwitchSignUpClick += OnSwitchSignUpClick;
+                _model.OnSwitchLogInClick += OnSwitchLogInClick;
+                _model.OnLogInClick += OnLogInClick;
+                _model.OnSignUpClick += OnSignUpClick;
+                _model.OnLogOutClick += OnLogOutClick;
+                _model.OnDeleteClick += OnDeleteClick;
+                _model.OnInputName += OnInputName;
+                _model.OnInputPassword += OnInputPassword;
+
+                AuthenticationService.Instance.SignedIn += OnSignedIn;
+                AuthenticationService.Instance.SignInFailed += OnSignInFailed;
+                AuthenticationService.Instance.SignedOut += OnSignedOut;
+                AuthenticationService.Instance.Expired += OnExpired;
             }
             catch (Exception e)
             {
                 Debug.LogException(e);
-                return;
             }
+            finally
+            {
+                _isRequestAwaited = false;
+            }
+        }
 
-            _model.OnSwitchSignUpClick += OnSwitchSignUpClick;
-            _model.OnSwitchLogInClick += OnSwitchLogInClick;
-            _model.OnLogInClick += OnLogInClick;
-            _model.OnSignUpClick += OnSignUpClick;
-            _model.OnLogOutClick += OnLogOutClick;
-            _model.OnDeleteClick += OnDeleteClick;
-            _model.OnInputName += OnInputName;
-            _model.OnInputPassword += OnInputPassword;
-
-            AuthenticationService.Instance.SignedIn += OnSignedIn;
-            AuthenticationService.Instance.SignInFailed += OnSignInFailed;
-            AuthenticationService.Instance.SignedOut += OnSignedOut;
-            AuthenticationService.Instance.Expired += OnExpired;
+        public async Task TryRestoreCurrentSessionAsync()
+        {
+            while (_isRequestAwaited)
+            {
+                await Task.Delay(50, _cts.Token);
+            }
 
             if (AuthenticationService.Instance.IsSignedIn)
             {
@@ -79,7 +104,9 @@ namespace DMZ.Legacy.LoginScreen
 
             if (AuthenticationService.Instance.SessionTokenExists)
             {
+                _isRequestAwaited = true;
                 var result = await TryAnonymousSignInAsync();
+                _isRequestAwaited = false;
                 if (result)
                 {
                     return;
