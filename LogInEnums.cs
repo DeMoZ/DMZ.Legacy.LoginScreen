@@ -37,4 +37,10 @@ namespace DMZ.Legacy.LoginScreen
         MinLength = 1 << 4,
         MaxLength = 1 << 5,
     }
+    
+    public enum AuthenticationType
+    {
+        Guest,
+        UserAndPassword,
+    }
 }

@@ -4,12 +4,16 @@ namespace DMZ.Legacy.LoginScreen
 {
     public class LogInModel : IDisposable
     {
+        public Action<bool> OnSetViewActive;
         public Action OnSwitchLogInClick;
         public Action OnSwitchSignUpClick;
+        public Action OnBackClick;
         public Action OnLogInClick;
         public Action OnSignUpClick;
         public Action OnLogOutClick;
         public Action OnDeleteClick;
+
+        public Action<AuthenticationType> OnAuthenticationTypeClick;
         
         public Action<string> OnInputName;
         public Action<string> OnInputPassword;
@@ -31,7 +35,7 @@ namespace DMZ.Legacy.LoginScreen
                 OnCurrentLoginViewState?.Invoke(_currentLoginViewState);   
             }
         }
-        
+
         public void Dispose()
         {
         }

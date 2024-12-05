@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace DMZ.Legacy.LoginScreen
 {
-    public class LogInController : IDisposable
+    public partial class LogInController : IDisposable
     {
         private const int ErrorCodeExistsAlready = 10003;
         private const int ErrorCodeInvalidNameOrPassword = 0;
@@ -25,6 +25,7 @@ namespace DMZ.Legacy.LoginScreen
         public LogInController(LogInModel model)
         {
             _model = model;
+            _model.OnSetViewActive?.Invoke(false);
             InitializeUnityServiceAsync();
         }
 
@@ -33,8 +34,10 @@ namespace DMZ.Legacy.LoginScreen
             _cts?.Cancel();
             _cts?.Dispose();
 
+            _model.OnAuthenticationTypeClick -= OnAuthenticationTypeClick;
             _model.OnSwitchSignUpClick -= OnSwitchSignUpClick;
             _model.OnSwitchLogInClick -= OnSwitchLogInClick;
+            _model.OnBackClick += OnBackClick;
             _model.OnLogInClick -= OnLogInClick;
             _model.OnSignUpClick -= OnSignUpClick;
             _model.OnLogOutClick -= OnLogOutClick;
@@ -56,7 +59,7 @@ namespace DMZ.Legacy.LoginScreen
             }
 
             _isRequestAwaited = true;
-            _model.OnRequestAwait?.Invoke(false);
+            _model.OnRequestAwait?.Invoke(true);
             _model.CurrentLoginViewState = LoginViewState.None;
 
             try
@@ -64,8 +67,10 @@ namespace DMZ.Legacy.LoginScreen
                 await UnityServices.InitializeAsync();
                 _isInitialized = true;
 
+                _model.OnAuthenticationTypeClick += OnAuthenticationTypeClick;
                 _model.OnSwitchSignUpClick += OnSwitchSignUpClick;
                 _model.OnSwitchLogInClick += OnSwitchLogInClick;
+                _model.OnBackClick += OnBackClick;
                 _model.OnLogInClick += OnLogInClick;
                 _model.OnSignUpClick += OnSignUpClick;
                 _model.OnLogOutClick += OnLogOutClick;
@@ -85,9 +90,15 @@ namespace DMZ.Legacy.LoginScreen
             finally
             {
                 _isRequestAwaited = false;
+                _model.OnRequestAwait?.Invoke(false);
             }
         }
 
+        public void SetViewActive(bool isActive)
+        {
+            _model.OnSetViewActive?.Invoke(isActive);
+        }
+        
         public async Task TryRestoreCurrentSessionAsync()
         {
             while (_isRequestAwaited)
@@ -104,6 +115,8 @@ namespace DMZ.Legacy.LoginScreen
 
             if (AuthenticationService.Instance.SessionTokenExists)
             {
+                DebugLog("Session token exists, attempt to automatic sign-in...");
+
                 _isRequestAwaited = true;
                 var result = await TryAnonymousSignInAsync();
                 _isRequestAwaited = false;
@@ -113,10 +126,23 @@ namespace DMZ.Legacy.LoginScreen
                 }
             }
 
-            _model.CurrentLoginViewState = LoginViewState.LogIn;
-            ValidateNameAndPassword(_nameText, _passwordText);
+            _model.CurrentLoginViewState = LoginViewState.None;
         }
 
+        private void OnAuthenticationTypeClick(AuthenticationType type)
+        {
+            switch (type)
+            {
+                case AuthenticationType.Guest:
+                    GuestSignInAsync();
+                    break;
+                case AuthenticationType.UserAndPassword:
+                    _model.CurrentLoginViewState = LoginViewState.LogIn;
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
         private void OnInputName(string text)
         {
             _nameText = text;
@@ -128,7 +154,7 @@ namespace DMZ.Legacy.LoginScreen
             _passwordText = text;
             ValidateNameAndPassword(_nameText, _passwordText);
         }
-
+        
         private void ValidateNameAndPassword(string nameText, string passwordText)
         {
             NameValidationType nameValidation = 0;
@@ -153,10 +179,16 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnNameAndPasswordValidation?.Invoke(nameValidation, passwordValidation);
         }
 
+        private async void GuestSignInAsync()
+        {
+            DebugLog("GuestSignInAsync");
+            _isRequestAwaited = true;
+            await TryAnonymousSignInAsync();
+            _isRequestAwaited = false;
+        }
+        
         private async Task<bool> TryAnonymousSignInAsync()
         {
-            DebugLog("Session token exists, attempt to automatic sign-in...");
-
             try
             {
                 await AuthenticationService.Instance.SignInAnonymouslyAsync();
@@ -187,7 +219,7 @@ namespace DMZ.Legacy.LoginScreen
             DebugLog("LogOut is successful.");
 
             _model.OnSetLogged(false, $"Logged out");
-            _model.CurrentLoginViewState = LoginViewState.LogIn;
+            _model.CurrentLoginViewState = LoginViewState.None;
             _model.OnClearInput?.Invoke();
         }
 
@@ -212,6 +244,11 @@ namespace DMZ.Legacy.LoginScreen
                     _model.OnLoginRespond?.Invoke(ResponseType.Error);
                     break;
             }
+        }
+        
+        private void OnBackClick()
+        {
+            _model.CurrentLoginViewState = LoginViewState.None;
         }
 
         private void OnLogInClick()

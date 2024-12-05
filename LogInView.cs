@@ -18,12 +18,17 @@ namespace DMZ.Legacy.LoginScreen
         [SerializeField] private Transform _logInState;
         [SerializeField] private Transform _loggedState;
 
+        [Header("None State")]
+        [SerializeField] private Button _userAndPasswordBtn;
+        [SerializeField] private Button _guestBtn;
+        
         [Header("Log In State")]
         [SerializeField] private TMP_Text _nameLbl;
         [SerializeField] private TMP_InputField _loginFld;
         [SerializeField] private TMP_Text _passwordLbl;
         [SerializeField] private TMP_InputField _passwordFld;
         [SerializeField] private TMP_Text _statusLbl;
+        [SerializeField] private Button _backBtn;
         [SerializeField] private Button _signUpBtn;
         [SerializeField] private Button _logInBtn;
         [SerializeField] private Toggle _switchLogInTgl;
@@ -80,6 +85,7 @@ namespace DMZ.Legacy.LoginScreen
                 }
             });
 
+            _backBtn.onClick.AddListener(() => _model.OnBackClick?.Invoke());
             _logInBtn.onClick.AddListener(() => _model.OnLogInClick?.Invoke());
             _signUpBtn.onClick.AddListener(() => _model.OnSignUpClick?.Invoke());
 
@@ -88,7 +94,11 @@ namespace DMZ.Legacy.LoginScreen
             
             _notSureBtn.onClick.AddListener(() => EnableConfirmContent(false));
             _sureBtn.onClick.AddListener(() => _model.OnDeleteClick?.Invoke());
+            
+            _guestBtn.onClick.AddListener(() => _model.OnAuthenticationTypeClick?.Invoke(AuthenticationType.Guest));
+            _userAndPasswordBtn.onClick.AddListener(() => _model.OnAuthenticationTypeClick?.Invoke(AuthenticationType.UserAndPassword));
 
+            _model.OnSetViewActive += SetViewActive;
             _model.OnLoginRespond += OnSignUpRespond;
             _model.OnRequestAwait += OnSetAllInteractable;
             _model.OnCurrentLoginViewState += OnSetLoginState;
@@ -106,12 +116,14 @@ namespace DMZ.Legacy.LoginScreen
             _loginFld.onValueChanged.RemoveAllListeners();
             _passwordFld.onValueChanged.RemoveAllListeners();
 
+            _backBtn.onClick.RemoveAllListeners();
             _signUpBtn.onClick.RemoveAllListeners();
             _logInBtn.onClick.RemoveAllListeners();
 
             _notSureBtn.onClick.RemoveAllListeners();
             _sureBtn.onClick.RemoveAllListeners();
             
+            _model.OnSetViewActive -= SetViewActive;
             _model.OnLoginRespond -= OnSignUpRespond;
             _model.OnRequestAwait -= OnSetAllInteractable;
             _model.OnSetLogged -= OnSetLogged;
@@ -119,7 +131,8 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnNameAndPasswordValidation -= OnNameAndPasswordValidation;
             _model.OnClearInput -= OnClearInput;
         }
-
+        
+        
         public void SetInfoText(string text)
         {
             _loginInfoTxt.text = text;
@@ -135,6 +148,11 @@ namespace DMZ.Legacy.LoginScreen
             }
 
             _loginInfoTxt.text = oldText + text;
+        }
+
+        private void SetViewActive(bool active)
+        {
+            gameObject.SetActive(active);
         }
         
         private void OnClearInput()

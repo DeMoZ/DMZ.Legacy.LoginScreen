@@ -11,6 +11,7 @@ namespace DMZ.Legacy.LoginScreen
             var  logInModel = new LogInModel();
             logInView.Init(logInModel);
             var logInController = new LogInController(logInModel);
+            logInController.SetViewActive(true);
             await logInController.TryRestoreCurrentSessionAsync();
         }
     }
