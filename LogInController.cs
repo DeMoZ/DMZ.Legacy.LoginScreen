@@ -19,6 +19,7 @@ namespace DMZ.Legacy.LoginScreen
         private string _nameText;
         private string _passwordText;
         private bool _isInitialized;
+        private bool _isSignedIn;
 
         private CancellationTokenSource _cts = new();
 
@@ -98,8 +99,27 @@ namespace DMZ.Legacy.LoginScreen
         {
             _model.OnSetViewActive?.Invoke(isActive);
         }
-        
-        public async Task TryRestoreCurrentSessionAsync()
+
+        public async Task<LoggedInData> Login(CancellationToken ct)
+        {
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            
+            TryAutoLoginAsync();
+            
+            while (!_isSignedIn)
+            {
+                await Task.Delay(50, _cts.Token);
+            }
+            
+            var loggedInData = new LoggedInData
+            {
+                PlayerId = AuthenticationService.Instance.PlayerId,
+                AccessToken = AuthenticationService.Instance.AccessToken,
+            };
+            return loggedInData;
+        }
+
+        private async void TryAutoLoginAsync()
         {
             while (_isRequestAwaited)
             {
@@ -143,6 +163,7 @@ namespace DMZ.Legacy.LoginScreen
                     throw new NotImplementedException();
             }
         }
+
         private void OnInputName(string text)
         {
             _nameText = text;
@@ -154,7 +175,7 @@ namespace DMZ.Legacy.LoginScreen
             _passwordText = text;
             ValidateNameAndPassword(_nameText, _passwordText);
         }
-        
+
         private void ValidateNameAndPassword(string nameText, string passwordText)
         {
             NameValidationType nameValidation = 0;
@@ -186,7 +207,7 @@ namespace DMZ.Legacy.LoginScreen
             await TryAnonymousSignInAsync();
             _isRequestAwaited = false;
         }
-        
+
         private async Task<bool> TryAnonymousSignInAsync()
         {
             try
@@ -212,6 +233,8 @@ namespace DMZ.Legacy.LoginScreen
 
             _model.OnSetLogged(true, $"PlayerID: {AuthenticationService.Instance.PlayerId}");
             _model.CurrentLoginViewState = LoginViewState.Signed;
+            
+            _isSignedIn = true;
         }
 
         private void OnSignedOut()
@@ -221,6 +244,8 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnSetLogged(false, $"Logged out");
             _model.CurrentLoginViewState = LoginViewState.None;
             _model.OnClearInput?.Invoke();
+           
+            _isSignedIn = false;
         }
 
         // todo roman
@@ -245,7 +270,7 @@ namespace DMZ.Legacy.LoginScreen
                     break;
             }
         }
-        
+
         private void OnBackClick()
         {
             _model.CurrentLoginViewState = LoginViewState.None;
@@ -390,13 +415,5 @@ namespace DMZ.Legacy.LoginScreen
         {
             Debug.LogError($"[{nameof(LogInController)}] {message}");
         }
-    }
-
-    // todo roman is this for what?
-    [Serializable]
-    public struct TestPlayerProfile
-    {
-        public PlayerInfo playerInfo;
-        public string Name;
     }
 }
