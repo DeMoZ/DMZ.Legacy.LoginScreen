@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e6dfa6d436ab461c8931207704205546, type: 3}
   m_Name: OnBuildConfig
   m_EditorClassIdentifier: 
-  BandleVersion: 0.1.26
-  BuildDate: 2024-12-08 01:31:12
+  BandleVersion: 0.1.28
+  BuildDate: 2024-12-08 02:18:13

@@ -1,16 +1,16 @@
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace DMZ.Legacy.BuildConfig
 {
     public class BuildVersion : MonoBehaviour
     {
         [SerializeField] private BuildConfig onBuildConfig;
-        [SerializeField] private Text versionText;
+        [SerializeField] private TMP_Text versionText;
 
         private void Start()
         {
-            versionText.text = $"build: {Application.version}, date: {onBuildConfig.BuildDate}";
+            versionText.text = $"build: {Application.version}\ndate: {onBuildConfig.BuildDate}";
         }
     }
 }
