@@ -12,7 +12,6 @@ namespace DMZ.Legacy.LoginScreen
         public Action OnSignUpClick;
         public Action OnLogOutClick;
         public Action OnDeleteClick;
-
         public Action<AuthenticationType> OnAuthenticationTypeClick;
         
         public Action<string> OnInputName;
@@ -21,7 +20,6 @@ namespace DMZ.Legacy.LoginScreen
 
         public Action<bool> OnRequestAwait;
         public Action<ResponseType> OnLoginRespond; // server response
-        public Action<bool, string> OnSetLogged;
         public Action<NameValidationType, PasswordValidationType> OnNameAndPasswordValidation;
         public Action<LoginViewState> OnCurrentLoginViewState;
         

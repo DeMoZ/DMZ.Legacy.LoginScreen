@@ -1,4 +1,5 @@
 using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace DMZ.Legacy.LoginScreen
@@ -15,7 +16,11 @@ namespace DMZ.Legacy.LoginScreen
             logInView.Init(logInModel);
             var logInController = new LogInController(logInModel);
             logInController.SetViewActive(true);
-            var loggedInData =  await logInController.Login(_cts.Token);
+            logInController.Login(_cts);
+            
+            await Task.Run(() => _cts.Token.WaitHandle.WaitOne());
+            
+            // logInController.SetViewActive(false);
             // todo roman debug log logged in ddta
         }
 

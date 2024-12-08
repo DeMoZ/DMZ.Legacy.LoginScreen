@@ -11,17 +11,15 @@ namespace DMZ.Legacy.LoginScreen
     {
         private const int ErrorCodeExistsAlready = 10003;
         private const int ErrorCodeInvalidNameOrPassword = 0;
-
         private readonly LogInModel _model;
         private readonly LogInInputValidator _inputValidator = new();
+        private readonly CancellationTokenSource _cts = new();
 
         private bool _isRequestAwaited;
         private string _nameText;
         private string _passwordText;
         private bool _isInitialized;
-        private bool _isSignedIn;
-
-        private CancellationTokenSource _cts = new();
+        private CancellationTokenSource _loginCts;
 
         public LogInController(LogInModel model)
         {
@@ -100,30 +98,29 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnSetViewActive?.Invoke(isActive);
         }
 
-        public async Task<LoggedInData> Login(CancellationToken ct)
+        public void Login(CancellationTokenSource lCts)
         {
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            _loginCts = lCts;
+            TryAutoLoginAsync(_cts.Token);
             
-            TryAutoLoginAsync();
-            
-            while (!_isSignedIn)
-            {
-                await Task.Delay(50, _cts.Token);
-            }
-            
-            var loggedInData = new LoggedInData
-            {
-                PlayerId = AuthenticationService.Instance.PlayerId,
-                AccessToken = AuthenticationService.Instance.AccessToken,
-            };
-            return loggedInData;
+            // while (!_isSignedIn)
+            // {
+            //     await Task.Delay(50, _cts.Token);
+            // }
+            //
+            // var loggedInData = new LoggedInData
+            // {
+            //     PlayerId = AuthenticationService.Instance.PlayerId,
+            //     AccessToken = AuthenticationService.Instance.AccessToken,
+            // };
+            // return loggedInData;
         }
 
-        private async void TryAutoLoginAsync()
+        private async void TryAutoLoginAsync(CancellationToken ct)
         {
             while (_isRequestAwaited)
             {
-                await Task.Delay(50, _cts.Token);
+                await Task.Delay(50, ct);
             }
 
             if (AuthenticationService.Instance.IsSignedIn)
@@ -231,21 +228,16 @@ namespace DMZ.Legacy.LoginScreen
             DebugLog($"PlayerID: {AuthenticationService.Instance.PlayerId}");
             DebugLog($"Access Token: {AuthenticationService.Instance.AccessToken}");
 
-            _model.OnSetLogged(true, $"PlayerID: {AuthenticationService.Instance.PlayerId}");
             _model.CurrentLoginViewState = LoginViewState.Signed;
-            
-            _isSignedIn = true;
+            _loginCts.Cancel();
         }
 
         private void OnSignedOut()
         {
             DebugLog("LogOut is successful.");
 
-            _model.OnSetLogged(false, $"Logged out");
             _model.CurrentLoginViewState = LoginViewState.None;
             _model.OnClearInput?.Invoke();
-           
-            _isSignedIn = false;
         }
 
         // todo roman
@@ -377,7 +369,6 @@ namespace DMZ.Legacy.LoginScreen
                 var handle = AuthenticationService.Instance.DeleteAccountAsync();
                 await handle;
                 DebugLog("TryDeleteAsync Delete is successful.");
-                _model.OnSetLogged(false, $"Account Deleted");
             }
             catch (RequestFailedException e)
             {

@@ -13,10 +13,10 @@ namespace DMZ.Legacy.BuildConfig
             buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.ConfigFilePath);
         }
         
-        [MenuItem("DMZ/Build Data")]
+        [MenuItem("DMZ/Build Data Window")]
         public static void ShowWindow()
         {
-            GetWindow<BuildWindow>("Custom Window");
+            GetWindow<BuildWindow>("Build Data Widow");
         }
 
         private void OnGUI()

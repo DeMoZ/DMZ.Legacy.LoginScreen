@@ -8,20 +8,15 @@ namespace DMZ.Legacy.LoginScreen
 {
     public class LogInView : MonoBehaviour
     {
-        [Header("Developer information")]
-        [SerializeField] private TMP_Text _loginInfoTxt;
-        [SerializeField] private Transform _loginPanel;
-        [SerializeField] private Transform _userPanel;
-
         [Header("States")] 
         [SerializeField] private Transform _noneState;
         [SerializeField] private Transform _logInState;
         [SerializeField] private Transform _loggedState;
 
-        [Header("None State")]
+        [Header("None State")] 
         [SerializeField] private Button _userAndPasswordBtn;
         [SerializeField] private Button _guestBtn;
-        
+
         [Header("Log In State")]
         [SerializeField] private TMP_Text _nameLbl;
         [SerializeField] private TMP_InputField _loginFld;
@@ -34,7 +29,7 @@ namespace DMZ.Legacy.LoginScreen
         [SerializeField] private Toggle _switchLogInTgl;
         [SerializeField] private Toggle _switchSignUpTgl;
 
-        [Header("Logged State")] 
+        [Header("Logged State")]
         [SerializeField] private GameObject _logoutContent;
         [SerializeField] private Button _logOutBtn;
         [SerializeField] private Button _deleteBtn;
@@ -44,18 +39,23 @@ namespace DMZ.Legacy.LoginScreen
 
         [Header("Validation Text Color")]
         [SerializeField] private Color _validColor = Color.gray;
-
         [SerializeField] private Color _invalidColor = Color.white;
         [SerializeField] private Color _validInputTextColor = Color.black;
         [SerializeField] private Color _invalidInputTextColor = Color.red;
 
-        [Header("Await Animation")] 
+        [Header("Await Animation")]
         [SerializeField] private GameObject _awaitAnimation;
-
         private readonly StringBuilder _hintBuilder = new();
 
         private LogInModel _model;
         private Color _color;
+
+        private void Awake()
+        {
+            _noneState.gameObject.SetActive(false);
+            _logInState.gameObject.SetActive(false);
+            _loggedState.gameObject.SetActive(false);
+        }
 
         public void Init(LogInModel model)
         {
@@ -91,10 +91,10 @@ namespace DMZ.Legacy.LoginScreen
 
             _logOutBtn.onClick.AddListener(() => _model.OnLogOutClick?.Invoke());
             _deleteBtn.onClick.AddListener(() => EnableConfirmContent(true));
-            
+
             _notSureBtn.onClick.AddListener(() => EnableConfirmContent(false));
             _sureBtn.onClick.AddListener(() => _model.OnDeleteClick?.Invoke());
-            
+
             _guestBtn.onClick.AddListener(() => _model.OnAuthenticationTypeClick?.Invoke(AuthenticationType.Guest));
             _userAndPasswordBtn.onClick.AddListener(() => _model.OnAuthenticationTypeClick?.Invoke(AuthenticationType.UserAndPassword));
 
@@ -102,7 +102,6 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnLoginRespond += OnSignUpRespond;
             _model.OnRequestAwait += OnSetAllInteractable;
             _model.OnCurrentLoginViewState += OnSetLoginState;
-            _model.OnSetLogged += OnSetLogged;
             _model.OnCurrentLoginViewState += OnSetLoginState;
             _model.OnNameAndPasswordValidation += OnNameAndPasswordValidation;
             _model.OnClearInput += OnClearInput;
@@ -122,39 +121,20 @@ namespace DMZ.Legacy.LoginScreen
 
             _notSureBtn.onClick.RemoveAllListeners();
             _sureBtn.onClick.RemoveAllListeners();
-            
+
             _model.OnSetViewActive -= SetViewActive;
             _model.OnLoginRespond -= OnSignUpRespond;
             _model.OnRequestAwait -= OnSetAllInteractable;
-            _model.OnSetLogged -= OnSetLogged;
             _model.OnCurrentLoginViewState -= OnSetLoginState;
             _model.OnNameAndPasswordValidation -= OnNameAndPasswordValidation;
             _model.OnClearInput -= OnClearInput;
-        }
-        
-        
-        public void SetInfoText(string text)
-        {
-            _loginInfoTxt.text = text;
-        }
-
-        public void AddInfoText(string text)
-        {
-            var oldText = string.Empty;
-
-            if (_loginInfoTxt.text != string.Empty)
-            {
-                oldText = _loginInfoTxt.text + "\n";
-            }
-
-            _loginInfoTxt.text = oldText + text;
         }
 
         private void SetViewActive(bool active)
         {
             gameObject.SetActive(active);
         }
-        
+
         private void OnClearInput()
         {
             _loginFld.text = string.Empty;
@@ -165,13 +145,6 @@ namespace DMZ.Legacy.LoginScreen
         {
             _logoutContent.SetActive(!isEnable);
             _confirmContent.SetActive(isEnable);
-        }
-        
-        private void OnSetLogged(bool isLogged, string info)
-        {
-            _loginPanel.gameObject.SetActive(!isLogged);
-            _userPanel.gameObject.SetActive(isLogged);
-            _loginInfoTxt.text = info;
         }
 
         private void OnSetLoginState(LoginViewState state)
@@ -195,7 +168,6 @@ namespace DMZ.Legacy.LoginScreen
             switch (state)
             {
                 case LoginViewState.None:
-                    OnSetLogged(false, string.Empty);
                     break;
                 case LoginViewState.LogIn:
                     ClearNameAndPasswordLabels();
@@ -217,8 +189,8 @@ namespace DMZ.Legacy.LoginScreen
 
         private void OnSignUpRespond(ResponseType responseType)
         {
-            Debug.LogError ("todo roman, Not implemented pop-up message with response type: " + responseType);
-            
+            Debug.LogError("todo roman, Not implemented pop-up message with response type: " + responseType);
+
             switch (responseType)
             {
                 case ResponseType.None:
