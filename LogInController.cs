@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace DMZ.Legacy.LoginScreen
 {
-    public partial class LogInController : IDisposable
+    public class LogInController : IDisposable
     {
         private const int ErrorCodeExistsAlready = 10003;
         private const int ErrorCodeInvalidNameOrPassword = 0;
@@ -15,11 +15,13 @@ namespace DMZ.Legacy.LoginScreen
         private readonly LogInInputValidator _inputValidator = new();
         private readonly CancellationTokenSource _cts = new();
 
-        private bool _isRequestAwaited;
+        //private bool _isRequestAwaited;
         private string _nameText;
         private string _passwordText;
         private bool _isInitialized;
         private CancellationTokenSource _loginCts;
+        private CancellationTokenSource _requestCts;
+        private Task<bool> _requestTask;
 
         public LogInController(LogInModel model)
         {
@@ -30,6 +32,8 @@ namespace DMZ.Legacy.LoginScreen
 
         public void Dispose()
         {
+            _loginCts?.Cancel();
+            _loginCts?.Dispose();
             _cts?.Cancel();
             _cts?.Dispose();
 
@@ -50,6 +54,21 @@ namespace DMZ.Legacy.LoginScreen
             AuthenticationService.Instance.Expired -= OnExpired;
         }
 
+        private void RunRequestTask()
+        {
+            StopRequestTask();
+            _requestCts = new CancellationTokenSource();
+            var tcs = new TaskCompletionSource<bool>();
+            _requestTask = tcs.Task;
+            _requestCts.Token.Register(() => tcs.TrySetResult(true));
+        }
+
+        private void StopRequestTask()
+        {
+            _requestCts?.Cancel();
+            _requestTask = null;
+        }
+
         private async void InitializeUnityServiceAsync()
         {
             if (_isInitialized)
@@ -57,7 +76,8 @@ namespace DMZ.Legacy.LoginScreen
                 return;
             }
 
-            _isRequestAwaited = true;
+            RunRequestTask();
+
             _model.OnRequestAwait?.Invoke(true);
             _model.CurrentLoginViewState = LoginViewState.None;
 
@@ -88,7 +108,7 @@ namespace DMZ.Legacy.LoginScreen
             }
             finally
             {
-                _isRequestAwaited = false;
+                StopRequestTask();
                 _model.OnRequestAwait?.Invoke(false);
             }
         }
@@ -98,16 +118,18 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnSetViewActive?.Invoke(isActive);
         }
 
-        public void Login(CancellationTokenSource lCts)
+        public async Task Login()
         {
-            _loginCts = lCts;
-            TryAutoLoginAsync(_cts.Token);
+            _loginCts?.Cancel();
+            _loginCts = new CancellationTokenSource();
+
+            var tcs = new TaskCompletionSource<bool>();
+            var loginTask = tcs.Task;
+            _loginCts.Token.Register(() => tcs.TrySetResult(true));
             
-            // while (!_isSignedIn)
-            // {
-            //     await Task.Delay(50, _cts.Token);
-            // }
-            //
+            TryAutoLoginAsync(_cts.Token);
+            await loginTask;
+            
             // var loggedInData = new LoggedInData
             // {
             //     PlayerId = AuthenticationService.Instance.PlayerId,
@@ -118,10 +140,8 @@ namespace DMZ.Legacy.LoginScreen
 
         private async void TryAutoLoginAsync(CancellationToken ct)
         {
-            while (_isRequestAwaited)
-            {
-                await Task.Delay(50, ct);
-            }
+            if (_requestTask is { IsCompleted: false })
+                await _requestTask;
 
             if (AuthenticationService.Instance.IsSignedIn)
             {
@@ -134,9 +154,10 @@ namespace DMZ.Legacy.LoginScreen
             {
                 DebugLog("Session token exists, attempt to automatic sign-in...");
 
-                _isRequestAwaited = true;
+                RunRequestTask();
                 var result = await TryAnonymousSignInAsync();
-                _isRequestAwaited = false;
+                StopRequestTask();
+
                 if (result)
                 {
                     return;
@@ -200,9 +221,9 @@ namespace DMZ.Legacy.LoginScreen
         private async void GuestSignInAsync()
         {
             DebugLog("GuestSignInAsync");
-            _isRequestAwaited = true;
+            RunRequestTask();
             await TryAnonymousSignInAsync();
-            _isRequestAwaited = false;
+            StopRequestTask();
         }
 
         private async Task<bool> TryAnonymousSignInAsync()
@@ -298,10 +319,10 @@ namespace DMZ.Legacy.LoginScreen
         /// <param name="isLogin">true for LogIn, false for SingUp</param>
         private async void TrySignAsync(bool isLogin)
         {
-            if (_isRequestAwaited)
+            if (_requestTask is { IsCompleted: false })
                 return;
 
-            _isRequestAwaited = true;
+            RunRequestTask();
             _model.OnRequestAwait?.Invoke(true);
 
             try
@@ -319,17 +340,20 @@ namespace DMZ.Legacy.LoginScreen
             {
                 DebugLogError($"TrySignAsync, Unexpected error during username/password sign-in:\n{e}");
             }
+            finally
+            {
+                StopRequestTask();
+            }
 
-            _isRequestAwaited = false;
             _model.OnRequestAwait?.Invoke(false);
         }
 
         private void TryLogOut()
         {
-            if (_isRequestAwaited)
+            if (_requestTask is { IsCompleted: false })
                 return;
 
-            _isRequestAwaited = true;
+            RunRequestTask();
             _model.OnRequestAwait?.Invoke(true);
 
             try
@@ -351,17 +375,20 @@ namespace DMZ.Legacy.LoginScreen
                 DebugLogError($"TryLogOut, Unexpected error during log-out:\n{e}");
                 _model.OnLoginRespond?.Invoke(ResponseType.Error);
             }
+            finally
+            {
+                StopRequestTask();
+            }
 
-            _isRequestAwaited = false;
             _model.OnRequestAwait?.Invoke(false);
         }
 
         private async void TryDeleteAsync()
         {
-            if (_isRequestAwaited)
+            if (_requestTask is { IsCompleted: false })
                 return;
 
-            _isRequestAwaited = true;
+            RunRequestTask();
             _model.OnRequestAwait?.Invoke(true);
 
             try
@@ -380,8 +407,11 @@ namespace DMZ.Legacy.LoginScreen
                 DebugLogError($"TryDeleteAsync, Unexpected error during username/password sign-in:\n{e.Message}");
                 _model.OnLoginRespond?.Invoke(ResponseType.Error);
             }
+            finally
+            {
+                StopRequestTask();
+            }
 
-            _isRequestAwaited = false;
             _model.OnRequestAwait?.Invoke(false);
         }
 
