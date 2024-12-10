@@ -12,6 +12,7 @@ namespace DMZ.Legacy.LoginScreen
         public Action OnSignUpClick;
         public Action OnLogOutClick;
         public Action OnDeleteClick;
+        public Action OnCloseClick;
         public Action<AuthenticationType> OnAuthenticationTypeClick;
         
         public Action<string> OnInputName;
@@ -33,7 +34,7 @@ namespace DMZ.Legacy.LoginScreen
                 OnCurrentLoginViewState?.Invoke(_currentLoginViewState);   
             }
         }
-
+        
         public void Dispose()
         {
         }

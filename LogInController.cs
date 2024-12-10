@@ -45,6 +45,7 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnSignUpClick -= OnSignUpClick;
             _model.OnLogOutClick -= OnLogOutClick;
             _model.OnDeleteClick -= OnDeleteClick;
+            _model.OnCloseClick -= OnCloseClick;
             _model.OnInputName -= OnInputName;
             _model.OnInputPassword -= OnInputPassword;
 
@@ -52,21 +53,6 @@ namespace DMZ.Legacy.LoginScreen
             AuthenticationService.Instance.SignInFailed -= OnSignInFailed;
             AuthenticationService.Instance.SignedOut -= OnSignedOut;
             AuthenticationService.Instance.Expired -= OnExpired;
-        }
-
-        private void RunRequestTask()
-        {
-            StopRequestTask();
-            _requestCts = new CancellationTokenSource();
-            var tcs = new TaskCompletionSource<bool>();
-            _requestTask = tcs.Task;
-            _requestCts.Token.Register(() => tcs.TrySetResult(true));
-        }
-
-        private void StopRequestTask()
-        {
-            _requestCts?.Cancel();
-            _requestTask = null;
         }
 
         private async void InitializeUnityServiceAsync()
@@ -94,6 +80,7 @@ namespace DMZ.Legacy.LoginScreen
                 _model.OnSignUpClick += OnSignUpClick;
                 _model.OnLogOutClick += OnLogOutClick;
                 _model.OnDeleteClick += OnDeleteClick;
+                _model.OnCloseClick += OnCloseClick;
                 _model.OnInputName += OnInputName;
                 _model.OnInputPassword += OnInputPassword;
 
@@ -118,7 +105,33 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnSetViewActive?.Invoke(isActive);
         }
 
-        public async Task Login()
+        public async Task LoginAsync()
+        {
+            var loginTask = RunLogInTask(); 
+            TryAutoLoginAsync(_cts.Token);
+            await loginTask;
+
+            // var loggedInData = new LoggedInData
+            // {
+            //     PlayerId = AuthenticationService.Instance.PlayerId,
+            //     AccessToken = AuthenticationService.Instance.AccessToken,
+            // };
+            // return loggedInData;
+        }
+
+        public async Task LogOutAsync()
+        {
+            // todo roman show view with logout state
+            // implement close button for view at logout state
+            
+            var loginTask = RunLogInTask(); 
+            SetViewActive(true);
+            
+            await loginTask;
+            SetViewActive(false);
+        }
+
+        private Task RunLogInTask()
         {
             _loginCts?.Cancel();
             _loginCts = new CancellationTokenSource();
@@ -126,16 +139,22 @@ namespace DMZ.Legacy.LoginScreen
             var tcs = new TaskCompletionSource<bool>();
             var loginTask = tcs.Task;
             _loginCts.Token.Register(() => tcs.TrySetResult(true));
-            
-            TryAutoLoginAsync(_cts.Token);
-            await loginTask;
-            
-            // var loggedInData = new LoggedInData
-            // {
-            //     PlayerId = AuthenticationService.Instance.PlayerId,
-            //     AccessToken = AuthenticationService.Instance.AccessToken,
-            // };
-            // return loggedInData;
+            return loginTask;
+        }
+
+        private void RunRequestTask()
+        {
+            StopRequestTask();
+            _requestCts = new CancellationTokenSource();
+            var tcs = new TaskCompletionSource<bool>();
+            _requestTask = tcs.Task;
+            _requestCts.Token.Register(() => tcs.TrySetResult(true));
+        }
+
+        private void StopRequestTask()
+        {
+            _requestCts?.Cancel();
+            _requestTask = null;
         }
 
         private async void TryAutoLoginAsync(CancellationToken ct)
@@ -259,6 +278,7 @@ namespace DMZ.Legacy.LoginScreen
 
             _model.CurrentLoginViewState = LoginViewState.None;
             _model.OnClearInput?.Invoke();
+            _loginCts.Cancel();
         }
 
         // todo roman
@@ -293,6 +313,7 @@ namespace DMZ.Legacy.LoginScreen
         {
             DebugLog("OnLoginClickAsync");
             TrySignAsync(true);
+            _loginCts.Cancel();
         }
 
         private void OnSignUpClick()
@@ -311,6 +332,13 @@ namespace DMZ.Legacy.LoginScreen
         {
             DebugLog("OnDeleteClick");
             TryDeleteAsync();
+        }
+        
+        private void OnCloseClick()
+        {
+            DebugLog("OnCloseClick");
+            SetViewActive(false);
+            
         }
 
         /// <summary>

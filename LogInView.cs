@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace DMZ.Legacy.LoginScreen
@@ -36,6 +37,7 @@ namespace DMZ.Legacy.LoginScreen
         [SerializeField] private GameObject _confirmContent;
         [SerializeField] private Button _notSureBtn;
         [SerializeField] private Button _sureBtn;
+        [SerializeField] private Button _closeBtn;
 
         [Header("Validation Text Color")]
         [SerializeField] private Color _validColor = Color.gray;
@@ -45,6 +47,10 @@ namespace DMZ.Legacy.LoginScreen
 
         [Header("Await Animation")]
         [SerializeField] private GameObject _awaitAnimation;
+        
+        [Header("Misk")]
+        [SerializeField] private UnityEvent<bool> _onEnable;
+        
         private readonly StringBuilder _hintBuilder = new();
 
         private LogInModel _model;
@@ -55,6 +61,16 @@ namespace DMZ.Legacy.LoginScreen
             _noneState.gameObject.SetActive(false);
             _logInState.gameObject.SetActive(false);
             _loggedState.gameObject.SetActive(false);
+        }
+
+        private void OnEnable()
+        {
+            _onEnable?.Invoke(true);
+        }
+        
+        private void OnDisable()
+        {
+            _onEnable?.Invoke(false);
         }
 
         public void Init(LogInModel model)
@@ -94,6 +110,7 @@ namespace DMZ.Legacy.LoginScreen
 
             _notSureBtn.onClick.AddListener(() => EnableConfirmContent(false));
             _sureBtn.onClick.AddListener(() => _model.OnDeleteClick?.Invoke());
+            _closeBtn.onClick.AddListener(() => _model.OnCloseClick?.Invoke());
 
             _guestBtn.onClick.AddListener(() => _model.OnAuthenticationTypeClick?.Invoke(AuthenticationType.Guest));
             _userAndPasswordBtn.onClick.AddListener(() => _model.OnAuthenticationTypeClick?.Invoke(AuthenticationType.UserAndPassword));
@@ -121,6 +138,7 @@ namespace DMZ.Legacy.LoginScreen
 
             _notSureBtn.onClick.RemoveAllListeners();
             _sureBtn.onClick.RemoveAllListeners();
+            _closeBtn.onClick.RemoveAllListeners();
 
             _model.OnSetViewActive -= SetViewActive;
             _model.OnLoginRespond -= OnSignUpRespond;

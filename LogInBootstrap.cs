@@ -12,7 +12,7 @@ namespace DMZ.Legacy.LoginScreen
             logInView.Init(logInModel);
             var logInController = new LogInController(logInModel);
             logInController.SetViewActive(true);
-            await logInController.Login();
+            await logInController.LoginAsync();
             
             // logInController.SetViewActive(false);
             // todo roman debug log logged in ddta
