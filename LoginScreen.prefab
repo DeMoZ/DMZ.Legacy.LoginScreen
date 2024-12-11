@@ -2113,7 +2113,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7545060546596644946}
   m_Layer: 5
-  m_Name: NoneState
+  m_Name: SelectLoginTypeState
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5403,7 +5403,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54dce446113154195a8a3b8c56d16a83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _noneState: {fileID: 7545060546596644946}
+  _selectLoginTypeState: {fileID: 7545060546596644946}
   _logInState: {fileID: 7142894878771483310}
   _loggedState: {fileID: 1796809959368014056}
   _userAndPasswordBtn: {fileID: 3678054211630478283}
@@ -5429,7 +5429,7 @@ MonoBehaviour:
   _invalidColor: {r: 1, g: 1, b: 1, a: 1}
   _validInputTextColor: {r: 0, g: 0, b: 0, a: 1}
   _invalidInputTextColor: {r: 1, g: 0, b: 0, a: 1}
-  _awaitAnimation: {fileID: 7833541530240238591}
+  _loadingBlocker: {fileID: 7833541530240238591}
   _onEnable:
     m_PersistentCalls:
       m_Calls: []

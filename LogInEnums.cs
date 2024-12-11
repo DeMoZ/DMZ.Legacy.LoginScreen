@@ -4,7 +4,7 @@ namespace DMZ.Legacy.LoginScreen
 {
     public enum LoginViewState
     {
-        None,
+        SelectLoginType,
         LogIn,
         SignUp,
         Signed

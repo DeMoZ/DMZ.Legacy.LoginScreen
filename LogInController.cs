@@ -9,19 +9,24 @@ namespace DMZ.Legacy.LoginScreen
 {
     public class LogInController : IDisposable
     {
+        // /// <summary>
+        // /// triggered when user logged out
+        // /// </summary>
+        public event Action OnLoggedOut;
+
         private const int ErrorCodeExistsAlready = 10003;
         private const int ErrorCodeInvalidNameOrPassword = 0;
         private readonly LogInModel _model;
         private readonly LogInInputValidator _inputValidator = new();
         private readonly CancellationTokenSource _cts = new();
 
-        //private bool _isRequestAwaited;
         private string _nameText;
         private string _passwordText;
         private bool _isInitialized;
         private CancellationTokenSource _loginCts;
+        private CancellationTokenSource _logoutCts;
         private CancellationTokenSource _requestCts;
-        private Task<bool> _requestTask;
+        //private Task<bool> _requestTask;
 
         public LogInController(LogInModel model)
         {
@@ -34,8 +39,13 @@ namespace DMZ.Legacy.LoginScreen
         {
             _loginCts?.Cancel();
             _loginCts?.Dispose();
+            _logoutCts?.Cancel();
+            _logoutCts?.Dispose();
             _cts?.Cancel();
             _cts?.Dispose();
+            _requestCts?.Cancel();
+            _requestCts?.Dispose();
+                //_requestTask = null;
 
             _model.OnAuthenticationTypeClick -= OnAuthenticationTypeClick;
             _model.OnSwitchSignUpClick -= OnSwitchSignUpClick;
@@ -62,13 +72,15 @@ namespace DMZ.Legacy.LoginScreen
                 return;
             }
 
-            RunRequestTask();
+            //RunRequestTask();
 
             _model.OnRequestAwait?.Invoke(true);
-            _model.CurrentLoginViewState = LoginViewState.None;
+            _model.CurrentLoginViewState = LoginViewState.SelectLoginType;
 
             try
             {
+                DebugLogError("InitializeUnityServiceAsync start");
+
                 await UnityServices.InitializeAsync();
                 _isInitialized = true;
 
@@ -88,6 +100,8 @@ namespace DMZ.Legacy.LoginScreen
                 AuthenticationService.Instance.SignInFailed += OnSignInFailed;
                 AuthenticationService.Instance.SignedOut += OnSignedOut;
                 AuthenticationService.Instance.Expired += OnExpired;
+
+                DebugLogError("InitializeUnityServiceAsync end");
             }
             catch (Exception e)
             {
@@ -95,7 +109,7 @@ namespace DMZ.Legacy.LoginScreen
             }
             finally
             {
-                StopRequestTask();
+                //StopRequestTask();
                 _model.OnRequestAwait?.Invoke(false);
             }
         }
@@ -107,10 +121,11 @@ namespace DMZ.Legacy.LoginScreen
 
         public async Task LoginAsync()
         {
-            var loginTask = RunLogInTask(); 
-            TryAutoLoginAsync(_cts.Token);
+            DebugLogError("LoginAsync start");
+            var loginTask = RunLogInTask();
+            TryAutoLoginAsync();
             await loginTask;
-
+            DebugLogError("LoginAsync end");
             // var loggedInData = new LoggedInData
             // {
             //     PlayerId = AuthenticationService.Instance.PlayerId,
@@ -119,71 +134,90 @@ namespace DMZ.Legacy.LoginScreen
             // return loggedInData;
         }
 
-        public async Task LogOutAsync()
+        public async void LogOutAsync()
         {
-            // todo roman show view with logout state
-            // implement close button for view at logout state
-            
-            var loginTask = RunLogInTask(); 
+            var loginTask = RunLogOutTask();
             SetViewActive(true);
-            
+
             await loginTask;
             SetViewActive(false);
         }
 
         private Task RunLogInTask()
         {
-            _loginCts?.Cancel();
+            // _loginCts?.Cancel();
             _loginCts = new CancellationTokenSource();
-
             var tcs = new TaskCompletionSource<bool>();
-            var loginTask = tcs.Task;
+            var task = tcs.Task;
             _loginCts.Token.Register(() => tcs.TrySetResult(true));
-            return loginTask;
+            return task;
         }
 
-        private void RunRequestTask()
+        private Task RunLogOutTask()
         {
-            StopRequestTask();
-            _requestCts = new CancellationTokenSource();
+            _logoutCts?.Cancel();
+            _logoutCts = new CancellationTokenSource();
             var tcs = new TaskCompletionSource<bool>();
-            _requestTask = tcs.Task;
-            _requestCts.Token.Register(() => tcs.TrySetResult(true));
+            var task = tcs.Task;
+            _logoutCts.Token.Register(() => tcs.TrySetResult(true));
+            return task;
         }
 
-        private void StopRequestTask()
-        {
-            _requestCts?.Cancel();
-            _requestTask = null;
-        }
+        // private void RunRequestTask()
+        // {
+        //     StopRequestTask();
+        //     DebugLogError("RunRequestTask");
+        //     _requestCts = new CancellationTokenSource();
+        //
+        //     var tcs = new TaskCompletionSource<bool>();
+        //     _requestTask = tcs.Task;
+        //     _requestCts.Token.Register(() => tcs.TrySetResult(true));
+        // }
 
-        private async void TryAutoLoginAsync(CancellationToken ct)
+        // private void StopRequestTask()
+        // {
+        //     DebugLogError("StopRequestTask");
+        //     _requestCts?.Cancel();
+        //     _requestTask = null;
+        // }
+
+        private async void TryAutoLoginAsync()
         {
-            if (_requestTask is { IsCompleted: false })
-                await _requestTask;
+            DebugLogError("TryAutoLoginAsync start");
+            // if (_requestTask is { IsCompleted: false })
+            //     await _requestTask;
 
             if (AuthenticationService.Instance.IsSignedIn)
             {
-                DebugLog("Already signed in");
+                DebugLog("TryAutoLoginAsync: Already signed in");
                 OnSignedIn();
                 return;
             }
 
             if (AuthenticationService.Instance.SessionTokenExists)
             {
-                DebugLog("Session token exists, attempt to automatic sign-in...");
+                DebugLog("TryAutoLoginAsync: Session token exists, attempt to automatic sign-in...");
 
-                RunRequestTask();
-                var result = await TryAnonymousSignInAsync();
-                StopRequestTask();
+                // RunRequestTask();
+                await TryAnonymousSignInAsync();
+                //_model.OnRequestAwait?.Invoke(false);
+                // StopRequestTask();
 
-                if (result)
-                {
-                    return;
-                }
+                // if (result)
+                // {
+                //     return;
+                // }
             }
 
-            _model.CurrentLoginViewState = LoginViewState.None;
+            if (!AuthenticationService.Instance.IsSignedIn)
+            {
+                DebugLog("TryAutoLoginAsync: Not signed in");
+                _model.CurrentLoginViewState = LoginViewState.SelectLoginType;
+            }
+
+            //_model.CurrentLoginViewState = LoginViewState.SelectLoginType;
+            //StopRequestTask();
+            DebugLogError("TryAutoLoginAsync end");
         }
 
         private void OnAuthenticationTypeClick(AuthenticationType type)
@@ -231,7 +265,8 @@ namespace DMZ.Legacy.LoginScreen
                     break;
 
                 default:
-                    throw new NotImplementedException();
+                    //throw new NotImplementedException();
+                    break;
             }
 
             _model.OnNameAndPasswordValidation?.Invoke(nameValidation, passwordValidation);
@@ -240,17 +275,16 @@ namespace DMZ.Legacy.LoginScreen
         private async void GuestSignInAsync()
         {
             DebugLog("GuestSignInAsync");
-            RunRequestTask();
+            //RunRequestTask();
             await TryAnonymousSignInAsync();
-            StopRequestTask();
+            //StopRequestTask();
         }
 
-        private async Task<bool> TryAnonymousSignInAsync()
+        private async Task TryAnonymousSignInAsync()
         {
             try
             {
                 await AuthenticationService.Instance.SignInAnonymouslyAsync();
-                return true;
             }
             catch (RequestFailedException)
             {
@@ -259,14 +293,12 @@ namespace DMZ.Legacy.LoginScreen
             {
                 DebugLogError($"TryAnonymousSignInAsync, Unexpected error during anonymous sign-in:\n{e}");
             }
-
-            return false;
         }
 
         private void OnSignedIn()
         {
-            DebugLog($"PlayerID: {AuthenticationService.Instance.PlayerId}");
-            DebugLog($"Access Token: {AuthenticationService.Instance.AccessToken}");
+            DebugLog($"OnSignedIn. PlayerID: {AuthenticationService.Instance.PlayerId}");
+            DebugLog($"OnSignedIn. Access Token: {AuthenticationService.Instance.AccessToken}");
 
             _model.CurrentLoginViewState = LoginViewState.Signed;
             _loginCts.Cancel();
@@ -276,9 +308,10 @@ namespace DMZ.Legacy.LoginScreen
         {
             DebugLog("LogOut is successful.");
 
-            _model.CurrentLoginViewState = LoginViewState.None;
+            _model.CurrentLoginViewState = LoginViewState.SelectLoginType;
             _model.OnClearInput?.Invoke();
-            _loginCts.Cancel();
+            _logoutCts.Cancel();
+            OnLoggedOut?.Invoke();
         }
 
         // todo roman
@@ -289,6 +322,7 @@ namespace DMZ.Legacy.LoginScreen
 
         private void OnSignInFailed(RequestFailedException e)
         {
+            DebugLog($"OnSignInFailed:\n{e}");
             switch (e.ErrorCode)
             {
                 case ErrorCodeExistsAlready:
@@ -298,7 +332,7 @@ namespace DMZ.Legacy.LoginScreen
                     _model.OnLoginRespond?.Invoke(ResponseType.InvalidPassword);
                     break;
                 default:
-                    DebugLog($"OnSignInFailed, Not handled RequestFailedException:\n{e}");
+                    DebugLogError($"OnSignInFailed, Not handled RequestFailedException:\n{e}");
                     _model.OnLoginRespond?.Invoke(ResponseType.Error);
                     break;
             }
@@ -306,14 +340,14 @@ namespace DMZ.Legacy.LoginScreen
 
         private void OnBackClick()
         {
-            _model.CurrentLoginViewState = LoginViewState.None;
+            _model.CurrentLoginViewState = LoginViewState.SelectLoginType;
         }
 
         private void OnLogInClick()
         {
             DebugLog("OnLoginClickAsync");
             TrySignAsync(true);
-            _loginCts.Cancel();
+            //_loginCts.Cancel();
         }
 
         private void OnSignUpClick()
@@ -333,12 +367,12 @@ namespace DMZ.Legacy.LoginScreen
             DebugLog("OnDeleteClick");
             TryDeleteAsync();
         }
-        
+
         private void OnCloseClick()
         {
             DebugLog("OnCloseClick");
             SetViewActive(false);
-            
+            _logoutCts.Cancel();
         }
 
         /// <summary>
@@ -347,10 +381,10 @@ namespace DMZ.Legacy.LoginScreen
         /// <param name="isLogin">true for LogIn, false for SingUp</param>
         private async void TrySignAsync(bool isLogin)
         {
-            if (_requestTask is { IsCompleted: false })
-                return;
-
-            RunRequestTask();
+            // if (_requestTask is { IsCompleted: false })
+            //     return;
+            //
+            // RunRequestTask();
             _model.OnRequestAwait?.Invoke(true);
 
             try
@@ -370,7 +404,7 @@ namespace DMZ.Legacy.LoginScreen
             }
             finally
             {
-                StopRequestTask();
+                //StopRequestTask();
             }
 
             _model.OnRequestAwait?.Invoke(false);
@@ -378,10 +412,10 @@ namespace DMZ.Legacy.LoginScreen
 
         private void TryLogOut()
         {
-            if (_requestTask is { IsCompleted: false })
-                return;
-
-            RunRequestTask();
+            // if (_requestTask is { IsCompleted: false })
+            //     return;
+            //
+            // RunRequestTask();
             _model.OnRequestAwait?.Invoke(true);
 
             try
@@ -398,14 +432,14 @@ namespace DMZ.Legacy.LoginScreen
                         break;
                 }
             }
-            catch (Exception e)
-            {
-                DebugLogError($"TryLogOut, Unexpected error during log-out:\n{e}");
-                _model.OnLoginRespond?.Invoke(ResponseType.Error);
-            }
+            // catch (Exception e)
+            // {
+            //     DebugLogError($"TryLogOut, Unexpected error during log-out:\n{e}");
+            //     _model.OnLoginRespond?.Invoke(ResponseType.Error);
+            // }
             finally
             {
-                StopRequestTask();
+                // StopRequestTask();
             }
 
             _model.OnRequestAwait?.Invoke(false);
@@ -413,10 +447,10 @@ namespace DMZ.Legacy.LoginScreen
 
         private async void TryDeleteAsync()
         {
-            if (_requestTask is { IsCompleted: false })
-                return;
-
-            RunRequestTask();
+            // if (_requestTask is { IsCompleted: false })
+            //     return;
+            //
+            // RunRequestTask();
             _model.OnRequestAwait?.Invoke(true);
 
             try
@@ -437,7 +471,7 @@ namespace DMZ.Legacy.LoginScreen
             }
             finally
             {
-                StopRequestTask();
+                // StopRequestTask();
             }
 
             _model.OnRequestAwait?.Invoke(false);

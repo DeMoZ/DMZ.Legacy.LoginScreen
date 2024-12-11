@@ -10,11 +10,11 @@ namespace DMZ.Legacy.LoginScreen
     public class LogInView : MonoBehaviour
     {
         [Header("States")] 
-        [SerializeField] private Transform _noneState;
+        [SerializeField] private Transform _selectLoginTypeState;
         [SerializeField] private Transform _logInState;
         [SerializeField] private Transform _loggedState;
 
-        [Header("None State")] 
+        [Header("Select Login Type State")] 
         [SerializeField] private Button _userAndPasswordBtn;
         [SerializeField] private Button _guestBtn;
 
@@ -45,8 +45,8 @@ namespace DMZ.Legacy.LoginScreen
         [SerializeField] private Color _validInputTextColor = Color.black;
         [SerializeField] private Color _invalidInputTextColor = Color.red;
 
-        [Header("Await Animation")]
-        [SerializeField] private GameObject _awaitAnimation;
+        [Header("Loading Blocker")]
+        [SerializeField] private GameObject _loadingBlocker;
         
         [Header("Misk")]
         [SerializeField] private UnityEvent<bool> _onEnable;
@@ -58,7 +58,7 @@ namespace DMZ.Legacy.LoginScreen
 
         private void Awake()
         {
-            _noneState.gameObject.SetActive(false);
+            _selectLoginTypeState.gameObject.SetActive(false);
             _logInState.gameObject.SetActive(false);
             _loggedState.gameObject.SetActive(false);
         }
@@ -126,6 +126,7 @@ namespace DMZ.Legacy.LoginScreen
 
         private void OnDestroy()
         {
+            Debug.LogWarning($"LogInView OnDestroy");
             _switchLogInTgl.onValueChanged.RemoveAllListeners();
             _switchSignUpTgl.onValueChanged.RemoveAllListeners();
 
@@ -170,7 +171,7 @@ namespace DMZ.Legacy.LoginScreen
             _statusLbl.text = string.Empty;
             _loginFld.textComponent.color = _validInputTextColor;
 
-            _noneState.gameObject.SetActive(state == LoginViewState.None);
+            _selectLoginTypeState.gameObject.SetActive(state == LoginViewState.SelectLoginType);
             _loggedState.gameObject.SetActive(state == LoginViewState.Signed);
 
             // Login or SignUp
@@ -185,7 +186,7 @@ namespace DMZ.Legacy.LoginScreen
 
             switch (state)
             {
-                case LoginViewState.None:
+                case LoginViewState.SelectLoginType:
                     break;
                 case LoginViewState.LogIn:
                     ClearNameAndPasswordLabels();
@@ -202,7 +203,8 @@ namespace DMZ.Legacy.LoginScreen
 
         private void OnSetAllInteractable(bool isInteractable)
         {
-            _awaitAnimation.SetActive(isInteractable);
+            Debug.LogError($"blockerActive {isInteractable}");
+           // _loadingBlocker.SetActive(isInteractable);
         }
 
         private void OnSignUpRespond(ResponseType responseType)
@@ -249,7 +251,8 @@ namespace DMZ.Legacy.LoginScreen
                     break;
 
                 default:
-                    throw new NotImplementedException();
+                    //throw new NotImplementedException();
+                    break;
             }
         }
 
