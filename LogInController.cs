@@ -37,6 +37,7 @@ namespace DMZ.Legacy.LoginScreen
 
         public void Dispose()
         {
+            DebugLogWarning($"!!!!!!!! Dispose");
             _loginCts?.Cancel();
             _loginCts?.Dispose();
             _logoutCts?.Cancel();
@@ -50,7 +51,7 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnAuthenticationTypeClick -= OnAuthenticationTypeClick;
             _model.OnSwitchSignUpClick -= OnSwitchSignUpClick;
             _model.OnSwitchLogInClick -= OnSwitchLogInClick;
-            _model.OnBackClick += OnBackClick;
+            _model.OnBackClick -= OnBackClick;
             _model.OnLogInClick -= OnLogInClick;
             _model.OnSignUpClick -= OnSignUpClick;
             _model.OnLogOutClick -= OnLogOutClick;
@@ -311,6 +312,7 @@ namespace DMZ.Legacy.LoginScreen
             _model.CurrentLoginViewState = LoginViewState.SelectLoginType;
             _model.OnClearInput?.Invoke();
             _logoutCts?.Cancel();
+            
             OnLoggedOut?.Invoke();
         }
 
@@ -322,7 +324,7 @@ namespace DMZ.Legacy.LoginScreen
 
         private void OnSignInFailed(RequestFailedException e)
         {
-            DebugLog($"OnSignInFailed:\n{e}");
+            DebugLogWarning($"OnSignInFailed:\n{e}");
             switch (e.ErrorCode)
             {
                 case ErrorCodeExistsAlready:
@@ -494,6 +496,11 @@ namespace DMZ.Legacy.LoginScreen
             Debug.Log($"[{nameof(LogInController)}] {message}");
         }
 
+        private void DebugLogWarning(string message)
+        {
+            Debug.LogWarning($"[{nameof(LogInController)}] {message}");
+        }
+        
         private void DebugLogError(string message)
         {
             Debug.LogError($"[{nameof(LogInController)}] {message}");

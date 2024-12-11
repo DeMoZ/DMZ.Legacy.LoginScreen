@@ -209,7 +209,7 @@ namespace DMZ.Legacy.LoginScreen
 
         private void OnSignUpRespond(ResponseType responseType)
         {
-            Debug.LogError("todo roman, Not implemented pop-up message with response type: " + responseType);
+            Debug.LogWarning("todo roman, Not implemented pop-up message with response type: " + responseType);
 
             switch (responseType)
             {
