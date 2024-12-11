@@ -301,7 +301,7 @@ namespace DMZ.Legacy.LoginScreen
             DebugLog($"OnSignedIn. Access Token: {AuthenticationService.Instance.AccessToken}");
 
             _model.CurrentLoginViewState = LoginViewState.Signed;
-            _loginCts.Cancel();
+            _loginCts?.Cancel();
         }
 
         private void OnSignedOut()
@@ -310,7 +310,7 @@ namespace DMZ.Legacy.LoginScreen
 
             _model.CurrentLoginViewState = LoginViewState.SelectLoginType;
             _model.OnClearInput?.Invoke();
-            _logoutCts.Cancel();
+            _logoutCts?.Cancel();
             OnLoggedOut?.Invoke();
         }
 
