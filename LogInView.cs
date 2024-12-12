@@ -14,7 +14,7 @@ namespace DMZ.Legacy.LoginScreen
         [SerializeField] private Transform _logInState;
         [SerializeField] private Transform _loggedState;
 
-        [Header("Select Login Type State")] 
+        [Header("Select Login Type State")]
         [SerializeField] private Button _userAndPasswordBtn;
         [SerializeField] private Button _guestBtn;
 
@@ -47,10 +47,10 @@ namespace DMZ.Legacy.LoginScreen
 
         [Header("Loading Blocker")]
         [SerializeField] private GameObject _loadingBlocker;
-        
+
         [Header("Misk")]
         [SerializeField] private UnityEvent<bool> _onEnable;
-        
+
         private readonly StringBuilder _hintBuilder = new();
 
         private LogInModel _model;
@@ -67,7 +67,7 @@ namespace DMZ.Legacy.LoginScreen
         {
             _onEnable?.Invoke(true);
         }
-        
+
         private void OnDisable()
         {
             _onEnable?.Invoke(false);
@@ -126,7 +126,6 @@ namespace DMZ.Legacy.LoginScreen
 
         private void OnDestroy()
         {
-            Debug.LogWarning($"LogInView OnDestroy");
             _switchLogInTgl.onValueChanged.RemoveAllListeners();
             _switchSignUpTgl.onValueChanged.RemoveAllListeners();
 
@@ -203,14 +202,11 @@ namespace DMZ.Legacy.LoginScreen
 
         private void OnSetAllInteractable(bool isInteractable)
         {
-            Debug.LogError($"blockerActive {isInteractable}");
-           // _loadingBlocker.SetActive(isInteractable);
+            _loadingBlocker.SetActive(isInteractable);
         }
 
         private void OnSignUpRespond(ResponseType responseType)
         {
-            Debug.LogWarning("todo roman, Not implemented pop-up message with response type: " + responseType);
-
             switch (responseType)
             {
                 case ResponseType.None:
@@ -249,10 +245,12 @@ namespace DMZ.Legacy.LoginScreen
                     LogInPasswordValidation(passwordValidationType);
                     _logInBtn.interactable = nameValidationType == 0 && passwordValidationType == 0;
                     break;
-
-                default:
-                    //throw new NotImplementedException();
+                
+                case LoginViewState.SelectLoginType:
+                    
                     break;
+                default:
+                    throw new NotImplementedException($"[{nameof(LogInView)}] _model.CurrentLoginViewState: {_model.CurrentLoginViewState}");
             }
         }
 
