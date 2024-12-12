@@ -213,6 +213,7 @@ namespace DMZ.Legacy.LoginScreen
                     break;
 
                 case LoginViewState.LogIn:
+                case LoginViewState.SelectLoginType:
                     nameValidation = _inputValidator.ValidateLogInInputName(nameText);
                     passwordValidation = _inputValidator.ValidateLogInInputPassword(passwordText);
                     break;
