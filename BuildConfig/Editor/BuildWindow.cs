@@ -18,7 +18,27 @@ namespace DMZ.Legacy.BuildConfig
         {
             GetWindow<BuildWindow>("Build Data Widow");
         }
+        
+        [MenuItem("DMZ/Build WebGL")]
+        public static void BuildWebGL()
+        {
+            string path = "Builds/WebGL/Chang";
+            BuildPipeline.BuildPlayer(EditorBuildSettings.scenes, path, BuildTarget.WebGL, BuildOptions.Development);
 
+            // Add hashes to files in Builds/WebGL/Chang
+            foreach (var file in System.IO.Directory.GetFiles(path))
+            {
+                if (file.Contains("index.html"))
+                {
+                    continue;
+                }
+                
+                string hash = DateTime.Now.Ticks.ToString();
+                string newFileName = $"{file}_{hash}";
+                System.IO.File.Move(file, newFileName);
+            }
+        }
+        
         private void OnGUI()
         {
             GUILayout.Label("Data Set To Build Automatically", EditorStyles.boldLabel);

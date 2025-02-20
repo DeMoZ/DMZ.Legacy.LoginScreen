@@ -268,7 +268,7 @@ namespace DMZ.Legacy.LoginScreen
             OnLoggedOut?.Invoke();
         }
 
-        // todo roman
+        // todo chang: implement refresh token
         private void OnExpired()
         {
             DebugLogError("Player session could not be refreshed and expired.");
