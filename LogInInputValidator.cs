@@ -11,8 +11,7 @@ namespace DMZ.Legacy.LoginScreen
         private const int MaxPassword = 30;
 
         private static readonly Regex NameRegex = new("^[a-zA-Z0-9._@-]*$", RegexOptions.Compiled);
-
-
+        
         public NameValidationType ValidateLogInInputName(string value)
         {
             if (string.IsNullOrEmpty(value))

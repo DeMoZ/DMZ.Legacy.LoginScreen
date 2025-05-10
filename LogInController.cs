@@ -60,7 +60,7 @@ namespace DMZ.Legacy.LoginScreen
             AuthenticationService.Instance.Expired -= OnExpired;
         }
 
-        private async void InitializeUnityServiceAsync()
+        private async Task InitializeUnityServiceAsync()
         {
             if (_isInitialized)
             {

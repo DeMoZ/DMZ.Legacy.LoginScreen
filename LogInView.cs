@@ -119,7 +119,6 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnLoginRespond += OnSignUpRespond;
             _model.OnRequestAwait += OnSetAllInteractable;
             _model.OnCurrentLoginViewState += OnSetLoginState;
-            _model.OnCurrentLoginViewState += OnSetLoginState;
             _model.OnNameAndPasswordValidation += OnNameAndPasswordValidation;
             _model.OnClearInput += OnClearInput;
         }
