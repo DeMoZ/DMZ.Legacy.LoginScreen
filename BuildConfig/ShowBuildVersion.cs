@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace DMZ.Legacy.BuildConfig
 {
-    public class BuildVersion : MonoBehaviour
+    public class ShowBuildVersion : MonoBehaviour
     {
         [SerializeField] private BuildConfig onBuildConfig;
         [SerializeField] private TMP_Text versionText;

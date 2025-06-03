@@ -121,6 +121,7 @@ namespace DMZ.Legacy.LoginScreen
             // return loggedInData;
         }
 
+        // todo chang return Task?
         public async void LogOutAsync()
         {
             var loginTask = RunLogOutTask();
