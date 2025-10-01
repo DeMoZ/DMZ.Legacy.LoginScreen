@@ -7,18 +7,24 @@ namespace DMZ.Legacy.BuildConfig
     public class BuildWindow : EditorWindow
     {
         private BuildConfig buildConfig;
-        
+
         private void OnEnable()
         {
-            buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.ConfigFilePath);
+            buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.OverrideConfigFilePath);
+            
+            if (buildConfig == null)
+            {
+                Debug.LogWarning($"Build Config not found at path: {BuildDataConstants.OverrideConfigFilePath}");
+                buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.ConfigFilePath);
+            }
         }
-        
+
         [MenuItem("DMZ/Build Data Window")]
         public static void ShowWindow()
         {
             GetWindow<BuildWindow>("Build Data Widow");
         }
-        
+
         [MenuItem("DMZ/Build WebGL")]
         public static void BuildWebGL()
         {
@@ -32,20 +38,20 @@ namespace DMZ.Legacy.BuildConfig
                 {
                     continue;
                 }
-                
+
                 string hash = DateTime.Now.Ticks.ToString();
                 string newFileName = $"{file}_{hash}";
                 System.IO.File.Move(file, newFileName);
             }
         }
-        
+
         private void OnGUI()
         {
             GUILayout.Label("Data Set To Build Automatically", EditorStyles.boldLabel);
             var buildDateTextField = EditorGUILayout.TextField("Date", buildConfig.BuildDate);
             var buildVersionTextField = EditorGUILayout.TextField("Build", buildConfig.BandleVersion);
             var oldBuildVersion = buildConfig.BandleVersion;
-            
+
             if (GUILayout.Button("Update build version"))
             {
                 //buildConfig.BandleVersion = GetBuildVersion(buildConfig.BandleVersion);
@@ -53,7 +59,7 @@ namespace DMZ.Legacy.BuildConfig
                 buildConfig.BuildDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 Debug.Log($"Updated Build Version from {oldBuildVersion} to {buildConfig.BandleVersion}");
             }
-            
+
             if (GUILayout.Button("Save Config"))
             {
                 PlayerSettings.bundleVersion = buildConfig.BandleVersion;
@@ -79,8 +85,8 @@ namespace DMZ.Legacy.BuildConfig
             {
                 buildVer[^1] = lastElement.ToString();
             }
-            
-            return  string.Join(".", buildVer);
+
+            return string.Join(".", buildVer);
         }
     }
 }
