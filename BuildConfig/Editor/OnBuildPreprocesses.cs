@@ -11,7 +11,14 @@ namespace DMZ.Legacy.BuildConfig
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            var buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.ConfigFilePath);
+            var buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.OverrideConfigFilePath);
+            
+            if (buildConfig == null)
+            {
+                Debug.LogWarning($"Build Config not found at path: {BuildDataConstants.OverrideConfigFilePath}");
+                buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.ConfigFilePath);
+            }
+            
             if (buildConfig == null)
             {
                 Debug.LogError("BuildConfig asset not found!");
