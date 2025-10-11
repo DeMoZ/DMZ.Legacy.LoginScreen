@@ -10,12 +10,12 @@ namespace DMZ.Legacy.BuildConfig
 
         private void OnEnable()
         {
-            buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.OverrideConfigFilePath);
+            buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.FilePath);
             
             if (buildConfig == null)
             {
-                Debug.LogWarning($"Build Config not found at path: {BuildDataConstants.OverrideConfigFilePath}");
-                buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.ConfigFilePath);
+                Debug.LogWarning($"Build Config not found at path: {BuildDataConstants.FilePath}");
+                buildConfig = ConfigUtils.CreateAndSave<BuildConfig>(BuildDataConstants.FilePath);
             }
         }
 
@@ -65,7 +65,7 @@ namespace DMZ.Legacy.BuildConfig
                 PlayerSettings.bundleVersion = buildConfig.BandleVersion;
                 EditorUtility.SetDirty(buildConfig);
                 AssetDatabase.SaveAssets();
-                Debug.Log($"Confivg Saved");
+                Debug.Log($"Config Saved");
             }
         }
 
