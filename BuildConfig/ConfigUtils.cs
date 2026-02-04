@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
-
+#if UNITY_EDITOR
 namespace DMZ.Legacy.BuildConfig
 {
     public class ConfigUtils
@@ -17,7 +17,7 @@ namespace DMZ.Legacy.BuildConfig
                 return null;
             }
 
-            AssetDatabase.StartAssetEditing();
+            UnityEditor.AssetDatabase.StartAssetEditing();
             T config = null;
 
             try
@@ -91,3 +91,4 @@ namespace DMZ.Legacy.BuildConfig
         }
     }
 }
+#endif
