@@ -30,7 +30,7 @@ namespace DMZ.Legacy.LoginScreen
         {
             _model = model;
             _model.OnSetViewActive?.Invoke(false);
-            InitializeUnityServiceAsync();
+            _ = InitializeUnityServiceAsync();
         }
 
         public void Dispose()
