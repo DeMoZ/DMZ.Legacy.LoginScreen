@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
@@ -10,37 +9,35 @@ namespace DMZ.Legacy.LoginScreen
     public class LogInController : IDisposable
     {
         /// <summary>
-        /// triggered when user logged out
+        /// triggered when user logged out or the session expired and could not be restored
         /// </summary>
         public event Action OnLoggedOut;
 
-        private const int ErrorCodeExistsAlready = 10003;
-        private const int ErrorCodeInvalidNameOrPassword = 0;
         private readonly LogInModel _model;
         private readonly LogInInputValidator _inputValidator = new();
-        private readonly CancellationTokenSource _cts = new();
 
         private string _nameText;
         private string _passwordText;
         private bool _isInitialized;
-        private CancellationTokenSource _loginCts;
-        private CancellationTokenSource _logoutCts;
+        private Task _initializeTask;
+        private TaskCompletionSource<bool> _loginTcs;
+        private TaskCompletionSource<bool> _logoutTcs;
 
         public LogInController(LogInModel model)
         {
             _model = model;
             _model.OnSetViewActive?.Invoke(false);
-            _ = InitializeUnityServiceAsync();
         }
 
         public void Dispose()
         {
-            _loginCts?.Cancel();
-            _loginCts?.Dispose();
-            _logoutCts?.Cancel();
-            _logoutCts?.Dispose();
-            _cts?.Cancel();
-            _cts?.Dispose();
+            _loginTcs?.TrySetCanceled();
+            _logoutTcs?.TrySetCanceled();
+
+            if (!_isInitialized)
+            {
+                return;
+            }
 
             _model.OnAuthenticationTypeClick -= OnAuthenticationTypeClick;
             _model.OnSwitchSignUpClick -= OnSwitchSignUpClick;
@@ -55,51 +52,8 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnInputPassword -= OnInputPassword;
 
             AuthenticationService.Instance.SignedIn -= OnSignedIn;
-            AuthenticationService.Instance.SignInFailed -= OnSignInFailed;
             AuthenticationService.Instance.SignedOut -= OnSignedOut;
             AuthenticationService.Instance.Expired -= OnExpired;
-        }
-
-        private async Task InitializeUnityServiceAsync()
-        {
-            if (_isInitialized)
-            {
-                return;
-            }
-
-            _model.OnRequestAwait?.Invoke(true);
-            _model.CurrentLoginViewState = LoginViewState.SelectLoginType;
-
-            try
-            {
-                await UnityServices.InitializeAsync();
-                _isInitialized = true;
-
-                _model.OnAuthenticationTypeClick += OnAuthenticationTypeClick;
-                _model.OnSwitchSignUpClick += OnSwitchSignUpClick;
-                _model.OnSwitchLogInClick += OnSwitchLogInClick;
-                _model.OnBackClick += OnBackClick;
-                _model.OnLogInClick += OnLogInClick;
-                _model.OnSignUpClick += OnSignUpClick;
-                _model.OnLogOutClick += OnLogOutClick;
-                _model.OnDeleteClick += OnDeleteClick;
-                _model.OnCloseClick += OnCloseClick;
-                _model.OnInputName += OnInputName;
-                _model.OnInputPassword += OnInputPassword;
-
-                AuthenticationService.Instance.SignedIn += OnSignedIn;
-                AuthenticationService.Instance.SignInFailed += OnSignInFailed;
-                AuthenticationService.Instance.SignedOut += OnSignedOut;
-                AuthenticationService.Instance.Expired += OnExpired;
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-            }
-            finally
-            {
-                _model.OnRequestAwait?.Invoke(false);
-            }
         }
 
         public void SetViewActive(bool isActive)
@@ -107,70 +61,124 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnSetViewActive?.Invoke(isActive);
         }
 
+        /// <summary>
+        /// Completes when the player is signed in: restores the cached session if possible, otherwise waits for the user to sign in.
+        /// Throws if Unity Services could not be initialized.
+        /// </summary>
         public async Task LoginAsync()
         {
-            var loginTask = RunLogInTask();
-            TryAutoLoginAsync();
-            await loginTask;
+            await EnsureInitializedAsync();
 
-            // var loggedInData = new LoggedInData
-            // {
-            //     PlayerId = AuthenticationService.Instance.PlayerId,
-            //     AccessToken = AuthenticationService.Instance.AccessToken,
-            // };
-            // return loggedInData;
-        }
-
-        // todo chang return Task?
-        public async void LogOutAsync()
-        {
-            var loginTask = RunLogOutTask();
-            SetViewActive(true);
-
-            await loginTask;
-            SetViewActive(false);
-        }
-
-        private Task RunLogInTask()
-        {
-            _loginCts = new CancellationTokenSource();
-            var tcs = new TaskCompletionSource<bool>();
-            var task = tcs.Task;
-            _loginCts.Token.Register(() => tcs.TrySetResult(true));
-            return task;
-        }
-
-        private Task RunLogOutTask()
-        {
-            _logoutCts?.Cancel();
-            _logoutCts = new CancellationTokenSource();
-            var tcs = new TaskCompletionSource<bool>();
-            var task = tcs.Task;
-            _logoutCts.Token.Register(() => tcs.TrySetResult(true));
-            return task;
-        }
-
-        private async void TryAutoLoginAsync()
-        {
             if (AuthenticationService.Instance.IsSignedIn)
             {
-                DebugLog("TryAutoLoginAsync: Already signed in");
+                DebugLog("LoginAsync: Already signed in");
                 OnSignedIn();
                 return;
             }
 
-            if (AuthenticationService.Instance.SessionTokenExists)
+            if (await TrySilentSignInAsync())
             {
-                DebugLog("TryAutoLoginAsync: Session token exists, attempt to automatic sign-in...");
-
-                _model.OnRequestAwait?.Invoke(true);
-                await TryAnonymousSignInAsync();
+                return;
             }
 
-            if (!AuthenticationService.Instance.IsSignedIn)
+            DebugLog("LoginAsync: Not signed in, waiting for user");
+            _loginTcs?.TrySetCanceled();
+            _loginTcs = new TaskCompletionSource<bool>();
+            _model.CurrentLoginViewState = LoginViewState.SelectLoginType;
+            await _loginTcs.Task;
+        }
+
+        /// <summary>
+        /// Shows the account view and completes when the user logged out, deleted the account or closed the view.
+        /// </summary>
+        public async Task LogOutAsync()
+        {
+            await EnsureInitializedAsync();
+
+            _logoutTcs?.TrySetCanceled();
+            _logoutTcs = new TaskCompletionSource<bool>();
+            SetViewActive(true);
+
+            try
             {
-                DebugLog("TryAutoLoginAsync: Not signed in");
-                _model.CurrentLoginViewState = LoginViewState.SelectLoginType;
+                await _logoutTcs.Task;
+            }
+            finally
+            {
+                SetViewActive(false);
+            }
+        }
+
+        private Task EnsureInitializedAsync()
+        {
+            if (_initializeTask == null || _initializeTask.IsFaulted || _initializeTask.IsCanceled)
+            {
+                _initializeTask = InitializeUnityServiceAsync();
+            }
+
+            return _initializeTask;
+        }
+
+        private async Task InitializeUnityServiceAsync()
+        {
+            _model.OnRequestAwait?.Invoke(true);
+            _model.CurrentLoginViewState = LoginViewState.SelectLoginType;
+
+            try
+            {
+                await UnityServices.InitializeAsync();
+            }
+            finally
+            {
+                _model.OnRequestAwait?.Invoke(false);
+            }
+
+            _model.OnAuthenticationTypeClick += OnAuthenticationTypeClick;
+            _model.OnSwitchSignUpClick += OnSwitchSignUpClick;
+            _model.OnSwitchLogInClick += OnSwitchLogInClick;
+            _model.OnBackClick += OnBackClick;
+            _model.OnLogInClick += OnLogInClick;
+            _model.OnSignUpClick += OnSignUpClick;
+            _model.OnLogOutClick += OnLogOutClick;
+            _model.OnDeleteClick += OnDeleteClick;
+            _model.OnCloseClick += OnCloseClick;
+            _model.OnInputName += OnInputName;
+            _model.OnInputPassword += OnInputPassword;
+
+            AuthenticationService.Instance.SignedIn += OnSignedIn;
+            AuthenticationService.Instance.SignedOut += OnSignedOut;
+            AuthenticationService.Instance.Expired += OnExpired;
+
+            _isInitialized = true;
+        }
+
+        /// <summary>
+        /// Signs in with the cached session token without user interaction. Errors are not shown to the user.
+        /// </summary>
+        private async Task<bool> TrySilentSignInAsync()
+        {
+            // without a session token SignInAnonymouslyAsync would create a new anonymous account
+            if (!AuthenticationService.Instance.SessionTokenExists)
+            {
+                return false;
+            }
+
+            DebugLog("TrySilentSignInAsync: Session token exists, attempt to automatic sign-in...");
+            _model.OnRequestAwait?.Invoke(true);
+
+            try
+            {
+                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                return true;
+            }
+            catch (Exception e)
+            {
+                DebugLogWarning($"TrySilentSignInAsync: Failed to restore session:\n{e}");
+                return false;
+            }
+            finally
+            {
+                _model.OnRequestAwait?.Invoke(false);
             }
         }
 
@@ -179,120 +187,93 @@ namespace DMZ.Legacy.LoginScreen
             switch (type)
             {
                 case AuthenticationType.Guest:
-                    GuestSignInAsync();
+                    DebugLog("OnAuthenticationTypeClick: Guest");
+                    SignInAsync(() => AuthenticationService.Instance.SignInAnonymouslyAsync(), false);
                     break;
                 case AuthenticationType.UserAndPassword:
                     _model.CurrentLoginViewState = LoginViewState.LogIn;
                     break;
                 default:
-                    throw new NotImplementedException();
+                    DebugLogError($"OnAuthenticationTypeClick: Not handled authentication type {type}");
+                    break;
             }
         }
 
         private void OnInputName(string text)
         {
             _nameText = text;
-            ValidateNameAndPassword(_nameText, _passwordText);
+            ValidateNameAndPassword();
         }
 
         private void OnInputPassword(string text)
         {
             _passwordText = text;
-            ValidateNameAndPassword(_nameText, _passwordText);
+            ValidateNameAndPassword();
         }
 
-        private void ValidateNameAndPassword(string nameText, string passwordText)
+        private void ValidateNameAndPassword()
         {
-            NameValidationType nameValidation = 0;
-            PasswordValidationType passwordValidation = 0;
+            NameValidationType nameValidation;
+            PasswordValidationType passwordValidation;
 
             switch (_model.CurrentLoginViewState)
             {
                 case LoginViewState.SignUp:
-                    nameValidation = _inputValidator.ValidateSignUpInputName(nameText);
-                    passwordValidation = _inputValidator.ValidateSignUpInputPassword(passwordText);
+                    nameValidation = _inputValidator.ValidateSignUpInputName(_nameText);
+                    passwordValidation = _inputValidator.ValidateSignUpInputPassword(_passwordText);
                     break;
 
                 case LoginViewState.LogIn:
                 case LoginViewState.SelectLoginType:
-                    nameValidation = _inputValidator.ValidateLogInInputName(nameText);
-                    passwordValidation = _inputValidator.ValidateLogInInputPassword(passwordText);
+                    nameValidation = _inputValidator.ValidateLogInInputName(_nameText);
+                    passwordValidation = _inputValidator.ValidateLogInInputPassword(_passwordText);
                     break;
 
                 default:
-                    throw new NotImplementedException();
+                    // no input fields in other states
+                    return;
             }
 
             _model.OnNameAndPasswordValidation?.Invoke(nameValidation, passwordValidation);
         }
 
-        private async void GuestSignInAsync()
-        {
-            DebugLog("GuestSignInAsync");
-            await TryAnonymousSignInAsync();
-        }
-
-        private async Task TryAnonymousSignInAsync()
-        {
-            try
-            {
-                _model.OnRequestAwait?.Invoke(true);
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
-            }
-            catch (RequestFailedException)
-            {
-            }
-            catch (Exception e)
-            {
-                DebugLogError($"TryAnonymousSignInAsync, Unexpected error during anonymous sign-in:\n{e}");
-            }
-        }
-
         private void OnSignedIn()
         {
             DebugLog($"OnSignedIn. PlayerID: {AuthenticationService.Instance.PlayerId}");
-            DebugLog($"OnSignedIn. Access Token: {AuthenticationService.Instance.AccessToken}");
 
             _model.CurrentLoginViewState = LoginViewState.Signed;
-            _loginCts?.Cancel();
-            _model.OnRequestAwait?.Invoke(false);
+            _loginTcs?.TrySetResult(true);
         }
 
         private void OnSignedOut()
         {
             DebugLog("LogOut is successful.");
+            HandleLoggedOut();
+        }
 
+        /// <summary>
+        /// The SDK refreshes the access token automatically, Expired is raised only when the refresh failed.
+        /// Try to restore the session once, otherwise treat it as log out.
+        /// </summary>
+        private async void OnExpired()
+        {
+            DebugLogWarning("Player session could not be refreshed and expired, trying to restore it...");
+
+            if (await TrySilentSignInAsync())
+            {
+                return;
+            }
+
+            DebugLogError("Player session expired and could not be restored.");
+            HandleLoggedOut();
+        }
+
+        private void HandleLoggedOut()
+        {
             _model.CurrentLoginViewState = LoginViewState.SelectLoginType;
             _model.OnClearInput?.Invoke();
-            _logoutCts?.Cancel();
-            _model.OnRequestAwait?.Invoke(false);
+            _logoutTcs?.TrySetResult(true);
             OnLoggedOut?.Invoke();
-        }
-
-        // todo chang: implement refresh token
-        private void OnExpired()
-        {
-            DebugLogError("Player session could not be refreshed and expired.");
-            _model.OnRequestAwait?.Invoke(false);
-        }
-
-        private void OnSignInFailed(RequestFailedException e)
-        {
-            switch (e.ErrorCode)
-            {
-                case ErrorCodeExistsAlready:
-                    _model.OnLoginRespond?.Invoke(ResponseType.ExistsAlready);
-                    break;
-                case ErrorCodeInvalidNameOrPassword:
-                    _model.OnLoginRespond?.Invoke(ResponseType.InvalidPassword);
-                    break;
-                default:
-                    DebugLogError($"OnSignInFailed, Not handled RequestFailedException:\n{e}");
-                    _model.OnLoginRespond?.Invoke(ResponseType.Error);
-                    break;
-            }
-            
-            _model.OnRequestAwait?.Invoke(false);
         }
 
         private void OnBackClick()
@@ -302,110 +283,123 @@ namespace DMZ.Legacy.LoginScreen
 
         private void OnLogInClick()
         {
-            DebugLog("OnLoginClickAsync");
-            TrySignAsync(true);
+            DebugLog("OnLogInClick");
+            SignInAsync(() => AuthenticationService.Instance.SignInWithUsernamePasswordAsync(_nameText, _passwordText), true);
         }
 
         private void OnSignUpClick()
         {
-            DebugLog("OnSignUpClickAsync");
-            TrySignAsync(false);
+            DebugLog("OnSignUpClick");
+            SignInAsync(() => AuthenticationService.Instance.SignUpWithUsernamePasswordAsync(_nameText, _passwordText), true);
         }
 
         private void OnLogOutClick()
         {
             DebugLog("OnLogOutClick");
-            TryLogOut();
+            // raises SignedOut synchronously
+            AuthenticationService.Instance.SignOut(true);
         }
 
         private void OnDeleteClick()
         {
             DebugLog("OnDeleteClick");
-            TryDeleteAsync();
+            DeleteAccountAsync();
         }
 
         private void OnCloseClick()
         {
             DebugLog("OnCloseClick");
             SetViewActive(false);
-            _logoutCts.Cancel();
+            _logoutTcs?.TrySetResult(false);
         }
 
         /// <summary>
-        /// 
+        /// Success is handled by the SignedIn event, errors are shown to the user.
         /// </summary>
-        /// <param name="isLogin">true for LogIn, false for SingUp</param>
-        private async void TrySignAsync(bool isLogin)
+        private async void SignInAsync(Func<Task> signIn, bool withCredentials)
         {
             _model.OnRequestAwait?.Invoke(true);
 
             try
             {
-                var handle = isLogin
-                    ? AuthenticationService.Instance.SignInWithUsernamePasswordAsync(_nameText, _passwordText)
-                    : AuthenticationService.Instance.SignUpWithUsernamePasswordAsync(_nameText, _passwordText);
-
-                await handle;
-            }
-            catch (RequestFailedException)
-            {
-            }
-            catch (Exception e)
-            {
-                DebugLogError($"TrySignAsync, Unexpected error during username/password sign-in:\n{e}");
-            }
-        }
-
-        private void TryLogOut()
-        {
-            try
-            {
-                _model.OnRequestAwait?.Invoke(true);
-                AuthenticationService.Instance.SignOut(true);
+                await signIn();
             }
             catch (RequestFailedException e)
             {
-                switch (e.ErrorCode)
+                var response = ToResponseType(e, withCredentials);
+                if (response == ResponseType.Error)
                 {
-                    default:
-                        DebugLogError($"TryLogOut, Not handled RequestFailedException:\n{e}");
-                        _model.OnLoginRespond?.Invoke(ResponseType.Error);
-                        break;
+                    DebugLogError($"SignInAsync, Not handled RequestFailedException:\n{e}");
                 }
-            }
-        }
 
-        private async void TryDeleteAsync()
-        {
-            try
-            {
-                _model.OnRequestAwait?.Invoke(true);
-                var handle = AuthenticationService.Instance.DeleteAccountAsync();
-                await handle;
-                DebugLog("TryDeleteAsync Delete is successful.");
-            }
-            catch (RequestFailedException e)
-            {
-                DebugLogError("TryDeleteAsync, Not handled RequestFailedException:\n" + e);
-                _model.OnLoginRespond?.Invoke(ResponseType.Error);
+                _model.OnLoginRespond?.Invoke(response);
             }
             catch (Exception e)
             {
-                DebugLogError($"TryDeleteAsync, Unexpected error during username/password sign-in:\n{e.Message}");
+                DebugLogError($"SignInAsync, Unexpected error during sign-in:\n{e}");
                 _model.OnLoginRespond?.Invoke(ResponseType.Error);
+            }
+            finally
+            {
+                _model.OnRequestAwait?.Invoke(false);
+            }
+        }
+
+        private static ResponseType ToResponseType(RequestFailedException e, bool withCredentials)
+        {
+            if (!withCredentials)
+            {
+                return ResponseType.Error;
+            }
+
+            // server "ENTITY_EXISTS" (sign-up with a taken username) is mapped by the SDK to AccountAlreadyLinked
+            if (e.ErrorCode == AuthenticationErrorCodes.AccountAlreadyLinked)
+            {
+                return ResponseType.ExistsAlready;
+            }
+
+            // server "WRONG_USERNAME_PASSWORD" has no mapping in the SDK and comes as Unknown
+            if (e.ErrorCode == CommonErrorCodes.Unknown)
+            {
+                return ResponseType.InvalidPassword;
+            }
+
+            return ResponseType.Error;
+        }
+
+        /// <summary>
+        /// On success the SDK signs out and raises SignedOut.
+        /// </summary>
+        private async void DeleteAccountAsync()
+        {
+            _model.OnRequestAwait?.Invoke(true);
+
+            try
+            {
+                await AuthenticationService.Instance.DeleteAccountAsync();
+                DebugLog("DeleteAccountAsync: Delete is successful.");
+            }
+            catch (Exception e)
+            {
+                DebugLogError($"DeleteAccountAsync, Failed to delete account:\n{e}");
+                _model.OnLoginRespond?.Invoke(ResponseType.Error);
+            }
+            finally
+            {
+                _model.OnRequestAwait?.Invoke(false);
             }
         }
 
         private void OnSwitchLogInClick()
         {
             _model.CurrentLoginViewState = LoginViewState.LogIn;
-            ValidateNameAndPassword(_nameText, _passwordText);
+            ValidateNameAndPassword();
         }
 
         private void OnSwitchSignUpClick()
         {
             _model.CurrentLoginViewState = LoginViewState.SignUp;
-            ValidateNameAndPassword(_nameText, _passwordText);
+            ValidateNameAndPassword();
         }
 
         private void DebugLog(string message)
@@ -417,7 +411,7 @@ namespace DMZ.Legacy.LoginScreen
         {
             Debug.LogWarning($"[{nameof(LogInController)}] {message}");
         }
-        
+
         private void DebugLogError(string message)
         {
             Debug.LogError($"[{nameof(LogInController)}] {message}");
