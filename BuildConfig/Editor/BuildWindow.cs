@@ -6,23 +6,10 @@ namespace DMZ.Legacy.BuildConfig
 {
     public class BuildWindow : EditorWindow
     {
-        private BuildConfig buildConfig;
-
-        private void OnEnable()
-        {
-            buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.FilePath);
-            
-            if (buildConfig == null)
-            {
-                Debug.LogWarning($"Build Config not found at path: {BuildDataConstants.FilePath}");
-                buildConfig = ConfigUtils.CreateAndSave<BuildConfig>(BuildDataConstants.FilePath);
-            }
-        }
-
         [MenuItem("DMZ/Build Data Window")]
         public static void ShowWindow()
         {
-            GetWindow<BuildWindow>("Build Data Widow");
+            GetWindow<BuildWindow>("Build Data Window");
         }
 
         [MenuItem("DMZ/Build WebGL")]
@@ -47,25 +34,17 @@ namespace DMZ.Legacy.BuildConfig
 
         private void OnGUI()
         {
-            GUILayout.Label("Data Set To Build Automatically", EditorStyles.boldLabel);
-            var buildDateTextField = EditorGUILayout.TextField("Date", buildConfig.BuildDate);
-            var buildVersionTextField = EditorGUILayout.TextField("Build", buildConfig.BandleVersion);
-            var oldBuildVersion = buildConfig.BandleVersion;
+            var buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.FilePath);
+            EditorGUILayout.LabelField("Version", PlayerSettings.bundleVersion);
+            EditorGUILayout.LabelField("Last build date", buildConfig != null ? buildConfig.BuildDate : "-");
+            EditorGUILayout.HelpBox($"The build date and version are written to {BuildDataConstants.FilePath} on every build.", MessageType.Info);
 
-            if (GUILayout.Button("Update build version"))
+            if (GUILayout.Button("Increment version"))
             {
-                //buildConfig.BandleVersion = GetBuildVersion(buildConfig.BandleVersion);
-                buildConfig.BandleVersion = GetBuildVersion(Application.version);
-                buildConfig.BuildDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                Debug.Log($"Updated Build Version from {oldBuildVersion} to {buildConfig.BandleVersion}");
-            }
-
-            if (GUILayout.Button("Save Config"))
-            {
-                PlayerSettings.bundleVersion = buildConfig.BandleVersion;
-                EditorUtility.SetDirty(buildConfig);
+                var oldVersion = PlayerSettings.bundleVersion;
+                PlayerSettings.bundleVersion = GetBuildVersion(oldVersion);
                 AssetDatabase.SaveAssets();
-                Debug.Log($"Config Saved");
+                Debug.Log($"Updated version from {oldVersion} to {PlayerSettings.bundleVersion}");
             }
         }
 

@@ -1,3 +1,4 @@
+using System;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -11,16 +12,21 @@ namespace DMZ.Legacy.BuildConfig
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            var buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.FilePath);
+            var buildConfig = LoadOrCreate();
+            buildConfig.BundleVersion = PlayerSettings.bundleVersion;
+            buildConfig.BuildDate = DateTime.Now.ToString(BuildDataConstants.DateFormat);
+            EditorUtility.SetDirty(buildConfig);
+            AssetDatabase.SaveAssetIfDirty(buildConfig);
 
-            if (buildConfig == null)
-            {
-                Debug.LogWarning($"Build Config not found at path: {BuildDataConstants.FilePath}");
-                buildConfig = ConfigUtils.CreateAndSave<BuildConfig>(BuildDataConstants.FilePath); 
-            }
-            
-            Debug.Log($"Set build date to {buildConfig.BuildDate}");
-            Debug.Log($"Set build version to {buildConfig.BandleVersion}");
+            Debug.Log($"Set build version to {buildConfig.BundleVersion}, build date to {buildConfig.BuildDate}");
+        }
+
+        public static BuildConfig LoadOrCreate()
+        {
+            var buildConfig = AssetDatabase.LoadAssetAtPath<BuildConfig>(BuildDataConstants.FilePath);
+            return buildConfig != null
+                ? buildConfig
+                : ConfigUtils.CreateAndSave<BuildConfig>(BuildDataConstants.FilePath);
         }
     }
 }

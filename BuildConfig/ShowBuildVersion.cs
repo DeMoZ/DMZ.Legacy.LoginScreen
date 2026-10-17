@@ -5,12 +5,13 @@ namespace DMZ.Legacy.BuildConfig
 {
     public class ShowBuildVersion : MonoBehaviour
     {
-        [SerializeField] private BuildConfig onBuildConfig;
         [SerializeField] private TMP_Text versionText;
 
         private void Start()
         {
-            versionText.text = $"build: {Application.version}\ndate: {onBuildConfig.BuildDate}";
+            var buildConfig = Resources.Load<BuildConfig>(BuildDataConstants.ResourcesPath);
+            var date = buildConfig != null ? buildConfig.BuildDate : "editor";
+            versionText.text = $"build: {Application.version}\ndate: {date}";
         }
     }
 }
