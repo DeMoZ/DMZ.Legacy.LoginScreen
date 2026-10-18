@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
+using Unity.Services.Core.Environments;
 using UnityEngine;
 
 namespace DMZ.Legacy.LoginScreen
@@ -14,6 +15,7 @@ namespace DMZ.Legacy.LoginScreen
         public event Action OnLoggedOut;
 
         private readonly LogInModel _model;
+        private readonly string _environmentName;
         private readonly LogInInputValidator _inputValidator = new();
 
         private string _nameText;
@@ -23,9 +25,11 @@ namespace DMZ.Legacy.LoginScreen
         private TaskCompletionSource<bool> _loginTcs;
         private TaskCompletionSource<bool> _logoutTcs;
 
-        public LogInController(LogInModel model)
+        /// <param name="environmentName">Unity Gaming Services environment; null uses the one from the project settings</param>
+        public LogInController(LogInModel model, string environmentName = null)
         {
             _model = model;
+            _environmentName = environmentName;
             _model.OnSetViewActive?.Invoke(false);
         }
 
@@ -126,7 +130,13 @@ namespace DMZ.Legacy.LoginScreen
 
             try
             {
-                await UnityServices.InitializeAsync();
+                var options = new InitializationOptions();
+                if (!string.IsNullOrEmpty(_environmentName))
+                {
+                    options.SetEnvironmentName(_environmentName);
+                }
+
+                await UnityServices.InitializeAsync(options);
             }
             finally
             {
