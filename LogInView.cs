@@ -39,6 +39,11 @@ namespace DMZ.Legacy.LoginScreen
         [SerializeField] private Button _sureBtn;
         [SerializeField] private Button _closeBtn;
 
+        [Header("Logged State: Guest")]
+        [Tooltip("Shown to a guest over the account view: keep the progress with a name and password. Optional")]
+        [SerializeField] private GameObject _guestContent;
+        [SerializeField] private Button _saveProgressBtn;
+
         [Header("Validation Text Color")]
         [SerializeField] private Color _validColor = Color.gray;
         [SerializeField] private Color _invalidColor = Color.white;
@@ -111,6 +116,12 @@ namespace DMZ.Legacy.LoginScreen
             _notSureBtn.onClick.AddListener(() => EnableConfirmContent(false));
             _sureBtn.onClick.AddListener(() => _model.OnDeleteClick?.Invoke());
             _closeBtn.onClick.AddListener(() => _model.OnCloseClick?.Invoke());
+            if (_saveProgressBtn != null)
+            {
+                _saveProgressBtn.onClick.AddListener(() => _model.OnSaveProgressClick?.Invoke());
+            }
+
+            SetGuestContentActive(false);
 
             _guestBtn.onClick.AddListener(() => _model.OnAuthenticationTypeClick?.Invoke(AuthenticationType.Guest));
             _userAndPasswordBtn.onClick.AddListener(() => _model.OnAuthenticationTypeClick?.Invoke(AuthenticationType.UserAndPassword));
@@ -121,6 +132,7 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnCurrentLoginViewState += OnSetLoginState;
             _model.OnNameAndPasswordValidation += OnNameAndPasswordValidation;
             _model.OnClearInput += OnClearInput;
+            _model.OnGuestChanged += OnGuestChanged;
         }
 
         private void OnDestroy()
@@ -138,6 +150,15 @@ namespace DMZ.Legacy.LoginScreen
             _notSureBtn.onClick.RemoveAllListeners();
             _sureBtn.onClick.RemoveAllListeners();
             _closeBtn.onClick.RemoveAllListeners();
+            if (_saveProgressBtn != null)
+            {
+                _saveProgressBtn.onClick.RemoveAllListeners();
+            }
+
+            if (_model == null)
+            {
+                return;
+            }
 
             _model.OnSetViewActive -= SetViewActive;
             _model.OnLoginRespond -= OnSignUpRespond;
@@ -145,6 +166,7 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnCurrentLoginViewState -= OnSetLoginState;
             _model.OnNameAndPasswordValidation -= OnNameAndPasswordValidation;
             _model.OnClearInput -= OnClearInput;
+            _model.OnGuestChanged -= OnGuestChanged;
         }
 
         private void SetViewActive(bool active)
@@ -158,10 +180,27 @@ namespace DMZ.Legacy.LoginScreen
             _passwordFld.text = string.Empty;
         }
 
+        private bool _isGuest;
+
+        private void OnGuestChanged(bool isGuest)
+        {
+            _isGuest = isGuest;
+            SetGuestContentActive(isGuest && _model.CurrentLoginViewState == LoginViewState.Signed);
+        }
+
+        private void SetGuestContentActive(bool isActive)
+        {
+            if (_guestContent != null)
+            {
+                _guestContent.SetActive(isActive);
+            }
+        }
+
         private void EnableConfirmContent(bool isEnable)
         {
             _logoutContent.SetActive(!isEnable);
             _confirmContent.SetActive(isEnable);
+            SetGuestContentActive(!isEnable && _isGuest && _model.CurrentLoginViewState == LoginViewState.Signed);
         }
 
         private void OnSetLoginState(LoginViewState state)
@@ -171,6 +210,7 @@ namespace DMZ.Legacy.LoginScreen
 
             _selectLoginTypeState.gameObject.SetActive(state == LoginViewState.SelectLoginType);
             _loggedState.gameObject.SetActive(state == LoginViewState.Signed);
+            SetGuestContentActive(_isGuest && state == LoginViewState.Signed);
 
             // Login or SignUp
             {
