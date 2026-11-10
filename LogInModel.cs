@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace DMZ.Legacy.LoginScreen
 {
@@ -15,6 +16,10 @@ namespace DMZ.Legacy.LoginScreen
         public Action OnCloseClick;
         public Action OnSaveProgressClick;
         public Action<AuthenticationType> OnAuthenticationTypeClick;
+        /// <summary>a provider button (<see cref="IExternalSignInProvider.Id"/>): sign in, or link to the guest from the guest card</summary>
+        public Action<string> OnProviderClick;
+        /// <summary>ids of the providers supported here, the buttons of the others are hidden</summary>
+        public Action<IReadOnlyCollection<string>> OnProvidersAvailable;
         
         public Action<string> OnInputName;
         public Action<string> OnInputPassword;
