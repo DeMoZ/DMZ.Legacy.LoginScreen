@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
@@ -9,6 +10,14 @@ namespace DMZ.Legacy.LoginScreen
 {
     public class LogInView : MonoBehaviour
     {
+        /// <summary>A button of an external sign-in provider, see <see cref="IExternalSignInProvider.Id"/></summary>
+        [Serializable]
+        public class ProviderButton
+        {
+            public string ProviderId;
+            public Button Button;
+        }
+
         [Header("States")] 
         [SerializeField] private Transform _selectLoginTypeState;
         [SerializeField] private Transform _logInState;
@@ -17,6 +26,10 @@ namespace DMZ.Legacy.LoginScreen
         [Header("Select Login Type State")]
         [SerializeField] private Button _userAndPasswordBtn;
         [SerializeField] private Button _guestBtn;
+        [Tooltip("Sign in with Google, Apple… Hidden when the provider is not supported here")]
+        [SerializeField] private List<ProviderButton> _providerBtns = new();
+        [Tooltip("The server answer for the provider buttons. Optional")]
+        [SerializeField] private TMP_Text _selectStatusLbl;
 
         [Header("Log In State")]
         [SerializeField] private TMP_Text _nameLbl;
@@ -43,6 +56,10 @@ namespace DMZ.Legacy.LoginScreen
         [Tooltip("Shown to a guest over the account view: keep the progress with a name and password. Optional")]
         [SerializeField] private GameObject _guestContent;
         [SerializeField] private Button _saveProgressBtn;
+        [Tooltip("Link Google, Apple… to the guest. Hidden when the provider is not supported here")]
+        [SerializeField] private List<ProviderButton> _guestProviderBtns = new();
+        [Tooltip("The server answer for the guest provider buttons. Optional")]
+        [SerializeField] private TMP_Text _guestStatusLbl;
 
         [Header("Validation Text Color")]
         [SerializeField] private Color _validColor = Color.gray;
@@ -123,6 +140,18 @@ namespace DMZ.Legacy.LoginScreen
 
             SetGuestContentActive(false);
 
+            foreach (var providerButton in AllProviderButtons())
+            {
+                string providerId = providerButton.ProviderId;
+                providerButton.Button.onClick.AddListener(() =>
+                {
+                    ClearStatus();
+                    _model.OnProviderClick?.Invoke(providerId);
+                });
+                // shown only when the controller says the provider is supported here
+                providerButton.Button.gameObject.SetActive(false);
+            }
+
             _guestBtn.onClick.AddListener(() => _model.OnAuthenticationTypeClick?.Invoke(AuthenticationType.Guest));
             _userAndPasswordBtn.onClick.AddListener(() => _model.OnAuthenticationTypeClick?.Invoke(AuthenticationType.UserAndPassword));
 
@@ -133,6 +162,7 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnNameAndPasswordValidation += OnNameAndPasswordValidation;
             _model.OnClearInput += OnClearInput;
             _model.OnGuestChanged += OnGuestChanged;
+            _model.OnProvidersAvailable += OnProvidersAvailable;
         }
 
         private void OnDestroy()
@@ -155,6 +185,11 @@ namespace DMZ.Legacy.LoginScreen
                 _saveProgressBtn.onClick.RemoveAllListeners();
             }
 
+            foreach (var providerButton in AllProviderButtons())
+            {
+                providerButton.Button.onClick.RemoveAllListeners();
+            }
+
             if (_model == null)
             {
                 return;
@@ -167,6 +202,66 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnNameAndPasswordValidation -= OnNameAndPasswordValidation;
             _model.OnClearInput -= OnClearInput;
             _model.OnGuestChanged -= OnGuestChanged;
+            _model.OnProvidersAvailable -= OnProvidersAvailable;
+        }
+
+        private IEnumerable<ProviderButton> AllProviderButtons()
+        {
+            foreach (var providerButton in _providerBtns)
+            {
+                if (providerButton?.Button != null)
+                {
+                    yield return providerButton;
+                }
+            }
+
+            foreach (var providerButton in _guestProviderBtns)
+            {
+                if (providerButton?.Button != null)
+                {
+                    yield return providerButton;
+                }
+            }
+        }
+
+        private void OnProvidersAvailable(IReadOnlyCollection<string> providerIds)
+        {
+            foreach (var providerButton in AllProviderButtons())
+            {
+                bool isAvailable = false;
+                foreach (string id in providerIds)
+                {
+                    isAvailable |= id == providerButton.ProviderId;
+                }
+
+                providerButton.Button.gameObject.SetActive(isAvailable);
+            }
+        }
+
+        private void ClearStatus()
+        {
+            SetStatus(string.Empty);
+        }
+
+        /// <summary>The server answer goes to the label of the current state: the form, the login screen or the guest card.</summary>
+        private void SetStatus(string text)
+        {
+            _statusLbl.text = text;
+            SetOptionalStatus(_selectStatusLbl, LoginViewState.SelectLoginType, text);
+            SetOptionalStatus(_guestStatusLbl, LoginViewState.Signed, text);
+        }
+
+        /// <summary>An optional label is shown only with a text (it takes no room in a layout otherwise).</summary>
+        private void SetOptionalStatus(TMP_Text label, LoginViewState state, string text)
+        {
+            if (label == null)
+            {
+                return;
+            }
+
+            bool isShown = !string.IsNullOrEmpty(text) && _model != null && _model.CurrentLoginViewState == state;
+            label.text = isShown ? text : string.Empty;
+            label.gameObject.SetActive(isShown);
         }
 
         private void SetViewActive(bool active)
@@ -205,7 +300,7 @@ namespace DMZ.Legacy.LoginScreen
 
         private void OnSetLoginState(LoginViewState state)
         {
-            _statusLbl.text = string.Empty;
+            ClearStatus();
             _loginFld.textComponent.color = _validInputTextColor;
 
             _selectLoginTypeState.gameObject.SetActive(state == LoginViewState.SelectLoginType);
@@ -249,20 +344,20 @@ namespace DMZ.Legacy.LoginScreen
             switch (responseType)
             {
                 case ResponseType.None:
-                    _statusLbl.text = string.Empty;
+                    ClearStatus();
                     break;
                 case ResponseType.ExistsAlready:
-                    _statusLbl.text = "Already exists";
+                    SetStatus("Already exists");
                     _loginFld.textComponent.color = _invalidInputTextColor;
                     break;
                 case ResponseType.InvalidPassword:
-                    _statusLbl.text = "Invalid login or password";
+                    SetStatus("Invalid login or password");
                     break;
                 case ResponseType.Success:
-                    _statusLbl.text = "Success";
+                    SetStatus("Success");
                     break;
                 case ResponseType.Error:
-                    _statusLbl.text = "Some Error";
+                    SetStatus("Some Error");
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(responseType), responseType, null);

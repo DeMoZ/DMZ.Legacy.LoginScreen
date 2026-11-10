@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
@@ -33,6 +35,7 @@ namespace DMZ.Legacy.LoginScreen
         private readonly LogInModel _model;
         private readonly string _environmentName;
         private readonly LogInInputValidator _inputValidator = new();
+        private readonly Dictionary<string, IExternalSignInProvider> _providers = new();
 
         private string _nameText;
         private string _passwordText;
@@ -43,11 +46,19 @@ namespace DMZ.Legacy.LoginScreen
         private bool _isSwitchingAccount;
 
         /// <param name="environmentName">Unity Gaming Services environment; null uses the one from the project settings</param>
-        public LogInController(LogInModel model, string environmentName = null)
+        /// <param name="providers">external sign-in providers (Google, Apple…); the view shows the buttons of the supported ones</param>
+        public LogInController(LogInModel model, string environmentName = null, IEnumerable<IExternalSignInProvider> providers = null)
         {
             _model = model;
             _environmentName = environmentName;
+
+            foreach (var provider in providers ?? Enumerable.Empty<IExternalSignInProvider>())
+            {
+                _providers[provider.Id] = provider;
+            }
+
             _model.OnSetViewActive?.Invoke(false);
+            _model.OnProvidersAvailable?.Invoke(_providers.Values.Where(p => p.IsSupported).Select(p => p.Id).ToList());
         }
 
         public void Dispose()
@@ -70,6 +81,7 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnDeleteClick -= OnDeleteClick;
             _model.OnCloseClick -= OnCloseClick;
             _model.OnSaveProgressClick -= OnSaveProgressClick;
+            _model.OnProviderClick -= OnProviderClick;
             _model.OnInputName -= OnInputName;
             _model.OnInputPassword -= OnInputPassword;
 
@@ -184,6 +196,7 @@ namespace DMZ.Legacy.LoginScreen
             _model.OnDeleteClick += OnDeleteClick;
             _model.OnCloseClick += OnCloseClick;
             _model.OnSaveProgressClick += OnSaveProgressClick;
+            _model.OnProviderClick += OnProviderClick;
             _model.OnInputName += OnInputName;
             _model.OnInputPassword += OnInputPassword;
 
@@ -362,7 +375,9 @@ namespace DMZ.Legacy.LoginScreen
             DebugLog("OnLogInClick");
             if (_model.IsUpgradingGuest)
             {
-                SwitchToAccountAsync(_nameText, _passwordText);
+                string username = _nameText;
+                string password = _passwordText;
+                SwitchToAccountAsync(() => AuthenticationService.Instance.SignInWithUsernamePasswordAsync(username, password), true);
                 return;
             }
 
@@ -457,10 +472,59 @@ namespace DMZ.Legacy.LoginScreen
                 if (await TryRequestAsync(() => AuthenticationService.Instance.AddUsernamePasswordAsync(username, password), true))
                 {
                     DebugLog($"AddUsernamePasswordAsync: the guest {AuthenticationService.Instance.PlayerId} has a name now");
-                    _model.IsUpgradingGuest = false;
-                    _model.OnClearInput?.Invoke();
-                    _model.CurrentLoginViewState = LoginViewState.Signed;
-                    _model.OnGuestChanged?.Invoke(false);
+                    OnGuestUpgraded();
+                }
+            }
+            finally
+            {
+                _model.OnRequestAwait?.Invoke(false);
+            }
+        }
+
+        /// <summary>The guest is a full player now (name and password or an external identity), with the same player id and data</summary>
+        private void OnGuestUpgraded()
+        {
+            _model.IsUpgradingGuest = false;
+            _model.OnClearInput?.Invoke();
+            _model.CurrentLoginViewState = LoginViewState.Signed;
+            _model.OnGuestChanged?.Invoke(false);
+        }
+
+        /// <summary>
+        /// A provider button: signed out (the login screen) it signs in, a signed-in guest (the guest card) links the identity
+        /// </summary>
+        private void OnProviderClick(string providerId)
+        {
+            DebugLog($"OnProviderClick: {providerId}");
+            if (!_providers.TryGetValue(providerId, out var provider) || !provider.IsSupported)
+            {
+                DebugLogError($"OnProviderClick: the provider {providerId} is not registered or not supported here");
+                _model.OnLoginRespond?.Invoke(ResponseType.Error);
+                return;
+            }
+
+            if (AuthenticationService.Instance.IsSignedIn)
+            {
+                LinkProviderToGuestAsync(provider);
+                return;
+            }
+
+            SignInWithProviderAsync(provider);
+        }
+
+        /// <summary>
+        /// Success is handled by the SignedIn event. A new player is created if no player has this identity.
+        /// </summary>
+        private async void SignInWithProviderAsync(IExternalSignInProvider provider)
+        {
+            _model.OnRequestAwait?.Invoke(true);
+
+            try
+            {
+                string credential = await TryRequestCredentialAsync(provider);
+                if (credential != null)
+                {
+                    await TryRequestAsync(() => provider.SignInAsync(credential), false);
                 }
             }
             finally
@@ -470,10 +534,80 @@ namespace DMZ.Legacy.LoginScreen
         }
 
         /// <summary>
+        /// The guest adds the identity and keeps its player id and data. If another player has the identity already,
+        /// the guest switches to that player like the log in with a name (<see cref="SwitchToAccountAsync"/>: the guest data is merged).
+        /// </summary>
+        private async void LinkProviderToGuestAsync(IExternalSignInProvider provider)
+        {
+            _model.OnRequestAwait?.Invoke(true);
+            string credential = null;
+            bool isLinkedToAnother = false;
+
+            try
+            {
+                credential = await TryRequestCredentialAsync(provider);
+                if (credential == null)
+                {
+                    return;
+                }
+
+                try
+                {
+                    await provider.LinkAsync(credential);
+                    DebugLog($"LinkProviderToGuestAsync: {provider.Id} is linked to the guest {AuthenticationService.Instance.PlayerId}");
+                    OnGuestUpgraded();
+                }
+                catch (RequestFailedException e) when (e.ErrorCode == AuthenticationErrorCodes.AccountAlreadyLinked)
+                {
+                    DebugLog($"LinkProviderToGuestAsync: another player has this {provider.Id} identity, switching to it");
+                    isLinkedToAnother = true;
+                }
+                catch (Exception e)
+                {
+                    DebugLogError($"LinkProviderToGuestAsync: failed to link {provider.Id}:\n{e}");
+                    _model.OnLoginRespond?.Invoke(ResponseType.Error);
+                }
+            }
+            finally
+            {
+                _model.OnRequestAwait?.Invoke(false);
+            }
+
+            if (isLinkedToAnother)
+            {
+                SwitchToAccountAsync(() => provider.SignInAsync(credential), false);
+            }
+        }
+
+        /// <returns>the provider credential, null if the player cancelled or the provider failed (the error is shown)</returns>
+        private async Task<string> TryRequestCredentialAsync(IExternalSignInProvider provider)
+        {
+            try
+            {
+                string credential = await provider.RequestCredentialAsync();
+                if (string.IsNullOrEmpty(credential))
+                {
+                    DebugLog($"TryRequestCredentialAsync: {provider.Id} sign-in is cancelled");
+                    return null;
+                }
+
+                return credential;
+            }
+            catch (Exception e)
+            {
+                DebugLogError($"TryRequestCredentialAsync: {provider.Id} failed:\n{e}");
+                _model.OnLoginRespond?.Invoke(ResponseType.Error);
+                return null;
+            }
+        }
+
+        /// <summary>
         /// The guest signs in to an existing account. The SDK can sign in only when signed out, so the guest is signed out first
         /// keeping its session token: if the sign-in fails, the guest is signed in again with it.
         /// </summary>
-        private async void SwitchToAccountAsync(string username, string password)
+        /// <param name="signIn">the sign-in to the account: with a name and password or with a provider credential</param>
+        /// <param name="withCredentials">true for a name and password: their errors are shown as such</param>
+        private async void SwitchToAccountAsync(Func<Task> signIn, bool withCredentials)
         {
             _model.OnRequestAwait?.Invoke(true);
             string guestId = AuthenticationService.Instance.PlayerId;
@@ -489,7 +623,7 @@ namespace DMZ.Legacy.LoginScreen
                 _isSwitchingAccount = true;
                 AuthenticationService.Instance.SignOut(false);
 
-                isSwitched = await TryRequestAsync(() => AuthenticationService.Instance.SignInWithUsernamePasswordAsync(username, password), true);
+                isSwitched = await TryRequestAsync(signIn, withCredentials);
                 if (!isSwitched)
                 {
                     AccountSwitchFailed?.Invoke();
